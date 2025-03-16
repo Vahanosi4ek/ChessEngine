@@ -4,7 +4,6 @@
 #include <iostream>
 
 int main() {
-
     test_time_movegen();
 
     return 0;

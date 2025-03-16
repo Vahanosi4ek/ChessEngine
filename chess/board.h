@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <string>
 #include <vector>
+#include <memory>
 
 enum Color {
     WHITE,
@@ -73,6 +74,8 @@ private:
 class Board {
 public:
     Board() {};
+    Board(const Board&) = default;
+    Board& operator=(const Board&) = default;
 
     Board& load_from_fen(const std::string& fen);
 
@@ -87,8 +90,11 @@ public:
     bool is_black(Square sq) const { return (pieces[sq] >= 6) && (pieces[sq] <= 11); }
     bool is_black(int row, int col) const { return is_black(Square(row * 8 + col)); }
 
+    Square get_king_sq(Color c) const { return king_pos[c]; }
+
     std::vector<int> get_indices(Piece p);
     Board& make_move(Move move);
+    void undo_move();
 
     bool is_square_attacked_by(Square sq, Color side);
 
@@ -96,7 +102,13 @@ public:
     MoveList gen_pseudolegal_moves();
     MoveList gen_legal_moves();
 
+    std::vector<Board> history;
 private:
+    // Useful for undoing moves
+
+    // Keeping track of king position (useful for speed)
+    Square king_pos[COLOR_ALL];
+
     // Loaded in from fen string
     Piece pieces[SQ_ALL];
     Color side_to_move;

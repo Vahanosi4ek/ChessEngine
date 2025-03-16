@@ -10,6 +10,6 @@
     assert(c); \
     std::cout << "Done!" << std::endl;
 
-int perft(Board board, int depth);
-int dump_perft(Board board, int depth);
+int perft(Board& board, const int& depth);
+int dump_perft(Board& board, const int& depth);
 void test_time_movegen();

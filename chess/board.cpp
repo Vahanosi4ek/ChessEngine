@@ -19,13 +19,13 @@ Board& Board::load_from_fen(const std::string& fen) {
         else if (cur == 'B') { set_piece(row, col, W_BISHOP); col++; }
         else if (cur == 'R') { set_piece(row, col, W_ROOK); col++; }
         else if (cur == 'Q') { set_piece(row, col, W_QUEEN); col++; }
-        else if (cur == 'K') { set_piece(row, col, W_KING); col++; }
+        else if (cur == 'K') { king_pos[WHITE] = Square(row * 8 + col); set_piece(row, col, W_KING); col++; }
         else if (cur == 'p') { set_piece(row, col, B_PAWN); col++; }
         else if (cur == 'n') { set_piece(row, col, B_KNIGHT); col++; }
         else if (cur == 'b') { set_piece(row, col, B_BISHOP); col++; }
         else if (cur == 'r') { set_piece(row, col, B_ROOK); col++; }
         else if (cur == 'q') { set_piece(row, col, B_QUEEN); col++; }
-        else if (cur == 'k') { set_piece(row, col, B_KING); col++; }
+        else if (cur == 'k') { king_pos[BLACK] = Square(row * 8 + col); set_piece(row, col, B_KING); col++; }
         else { // int
             for (int i = 0; i < cur - '0'; i++) {
                 set_piece(row, col, NO_PIECE);
@@ -63,19 +63,9 @@ Board& Board::load_from_fen(const std::string& fen) {
     return *this;
 }
 
-std::vector<int> Board::get_indices(Piece p) {
-    std::vector<int> res;
-
-    for (int i = 0; i < SQ_ALL; i++) {
-        if (pieces[i] == p) {
-            res.push_back(i);
-        }
-    }
-
-    return res;
-}
-
 Board& Board::make_move(Move move) {
+    history.push_back(*this);  // Store current board state
+
     // Check for capture or pawn move (for 50 rule)
     if ((pieces[move.from] == W_PAWN) || (pieces[move.to] != NO_PIECE)) rule50_half_moves = 0;
     else rule50_half_moves++;
@@ -111,6 +101,13 @@ Board& Board::make_move(Move move) {
             pieces[move.to - 8] = NO_PIECE;
         else if ((pieces[move.from] == B_PAWN) && (move.to == en_passant_sq))
             pieces[move.to + 8] = NO_PIECE;
+
+        // Update king pos if king move
+        if (pieces[move.from] == W_KING)
+            king_pos[WHITE] = move.to;
+        else if (pieces[move.from] == B_KING)
+            king_pos[BLACK] = move.to;
+
         pieces[move.to] = pieces[move.from];
     }
     // Check for promotion
@@ -141,6 +138,14 @@ Board& Board::make_move(Move move) {
     en_passant_sq = temp_en_passant_sq;
 
     return *this;
+}
+
+void Board::undo_move() {
+    if (history.empty()) {
+        std::cerr << "Undo move error: no previous state!" << std::endl;
+    }
+
+    *this = history.back();  // Restore previous state
 }
 
 bool Board::is_square_attacked_by(Square sq, Color side) {
@@ -520,14 +525,13 @@ MoveList Board::gen_pseudolegal_moves() {
 // TODO: implement board history
 MoveList Board::gen_legal_moves() {
     MoveList res;
-    Board temp_board = *this;
-    Piece safe_king = side_to_move == WHITE ? W_KING : B_KING;
+    Color safe_king_color = side_to_move;
 
-    for (Move move : temp_board.gen_pseudolegal_moves()) {
-        temp_board = *this;
-        temp_board.make_move(move);
-        if (!temp_board.is_square_attacked_by(Square(temp_board.get_indices(safe_king)[0]), temp_board.side_to_move))
+    for (Move move : gen_pseudolegal_moves()) {
+        make_move(move);
+        if (!is_square_attacked_by(get_king_sq(safe_king_color), side_to_move))
             res.push_back(move);
+        undo_move();
     }
 
     return res;

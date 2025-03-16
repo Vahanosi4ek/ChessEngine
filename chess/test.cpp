@@ -2,32 +2,30 @@
 
 #include <chrono>
 
-int perft(Board board, int depth) {
+int perft(Board& board, const int& depth) {
     int res = 0;
-    Board temp_board = board;
     if (depth == 0) return 1;
     else {
-        MoveList moves = temp_board.gen_legal_moves();
+        MoveList moves = board.gen_legal_moves();
         for (Move move : moves) {
-            temp_board.make_move(move);
-            res += perft(temp_board, depth - 1);
-            temp_board = board;
+            board.make_move(move);
+            res += perft(board, depth - 1);
+            board.undo_move();
         }
     }
 
     return res;
 }
 
-int dump_perft(Board board, int depth) {
+int dump_perft(Board& board, const int& depth) {
     int res = 0;
     int cur_res = 0;
-    Board temp_board = board;
-    for (Move move : temp_board.gen_legal_moves()) {
-        temp_board.make_move(move);
-        cur_res = perft(temp_board, depth - 1);
+    for (Move move : board.gen_legal_moves()) {
+        board.make_move(move);
+        cur_res = perft(board, depth - 1);
         res += cur_res;
         std::cout << move << ": " << cur_res << std::endl;
-        temp_board = board;
+        board.undo_move();
     }
 
     std::cout << "Total leaf nodes: " << res << std::endl;
