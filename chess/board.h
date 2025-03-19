@@ -1,10 +1,11 @@
 #pragma once
 
+#include "bitboard.h"
+
 #include <iostream>
 #include <cstdint>
 #include <string>
 #include <vector>
-#include <memory>
 
 enum Color {
     WHITE,
@@ -20,18 +21,6 @@ enum Piece {
     W_PAWN, W_KNIGHT, W_BISHOP, W_ROOK, W_QUEEN, W_KING,
     B_PAWN, B_KNIGHT, B_BISHOP, B_ROOK, B_QUEEN, B_KING,
     PIECE_ALL, NO_PIECE,
-};
-
-enum Square {
-    SQ_A1, SQ_B1, SQ_C1, SQ_D1, SQ_E1, SQ_F1, SQ_G1, SQ_H1,
-    SQ_A2, SQ_B2, SQ_C2, SQ_D2, SQ_E2, SQ_F2, SQ_G2, SQ_H2,
-    SQ_A3, SQ_B3, SQ_C3, SQ_D3, SQ_E3, SQ_F3, SQ_G3, SQ_H3,
-    SQ_A4, SQ_B4, SQ_C4, SQ_D4, SQ_E4, SQ_F4, SQ_G4, SQ_H4,
-    SQ_A5, SQ_B5, SQ_C5, SQ_D5, SQ_E5, SQ_F5, SQ_G5, SQ_H5,
-    SQ_A6, SQ_B6, SQ_C6, SQ_D6, SQ_E6, SQ_F6, SQ_G6, SQ_H6,
-    SQ_A7, SQ_B7, SQ_C7, SQ_D7, SQ_E7, SQ_F7, SQ_G7, SQ_H7,
-    SQ_A8, SQ_B8, SQ_C8, SQ_D8, SQ_E8, SQ_F8, SQ_G8, SQ_H8,
-    SQ_ALL, NO_SQ,
 };
 
 constexpr bool is_ok(Square sq) { return (SQ_A1 <= sq) && (sq <= SQ_H8); }
@@ -73,26 +62,29 @@ private:
 
 class Board {
 public:
-    Board() {};
+    Board();
     Board(const Board&) = default;
     Board& operator=(const Board&) = default;
 
     Board& load_from_fen(const std::string& fen);
 
-    void set_piece(int row, int col, Piece p) { pieces[row * 8 + col] = p; }
-    void set_piece(Square sq, Piece p) { pieces[int(sq)] = p; }
-    Piece get_piece(int row, int col) const { return pieces[row * 8 + col]; }
-    Piece get_piece(Square sq) const { return pieces[int(sq)]; }
-    bool is_white(Piece p) const { return p < 6; }
-    bool is_white(Square sq) const { return pieces[sq] < 6; }
+    void set_piece(int row, int col, Piece p) { set_piece(Square(row * 8 + col), p); }
+    void set_piece(Square sq, Piece p);
+    void rem_piece(int row, int col) { rem_piece(Square(row * 8 + col)); }
+    void rem_piece(Square sq) { if (get_piece(sq) != NO_PIECE) { clear_square(by_color[get_color(get_piece(sq))], sq); clear_square(by_type[get_type(get_piece(sq))], sq); } }
+    Piece get_piece(int row, int col) const { return get_piece(Square(row * 8 + col)); }
+    Piece get_piece(Square sq) const;
+    static Piece make_piece(Color c, PieceType p) { return Piece(c * 6 + p); }
+    static PieceType get_type(Piece p) { return PieceType(p % 6); }
+    static Color get_color(Piece p) { return is_white(p) ? WHITE : BLACK; }
+    static bool is_white(Piece p) { return p < 6; }
+    static bool is_black(Piece p) { return (p >= 6) && (p <= 11); }
+    PieceType get_type(Square sq) const { return get_type(get_piece(sq)); }
+    Color get_color(Square sq) const { return is_white(sq) ? WHITE : BLACK; }
+    bool is_white(Square sq) const { return get_square(by_color[WHITE], sq) ? true : false; }
+    bool is_black(Square sq) const { return get_square(by_color[BLACK], sq) ? true : false; }
     bool is_white(int row, int col) const { return is_white(Square(row * 8 + col)); }
-    bool is_black(Piece p) const { return (p >= 6) && (p <= 11); }
-    bool is_black(Square sq) const { return (pieces[sq] >= 6) && (pieces[sq] <= 11); }
     bool is_black(int row, int col) const { return is_black(Square(row * 8 + col)); }
-
-    Square get_king_sq(Color c) const { return king_pos[c]; }
-
-    std::vector<int> get_indices(Piece p);
     Board& make_move(Move move);
     void undo_move();
 
@@ -102,20 +94,20 @@ public:
     MoveList gen_pseudolegal_moves();
     MoveList gen_legal_moves();
 
-    std::vector<Board> history;
 private:
     // Useful for undoing moves
+    std::vector<Board> history;
 
-    // Keeping track of king position (useful for speed)
-    Square king_pos[COLOR_ALL];
+    // Bitboards
+    Bitboard by_color[COLOR_ALL];
+    Bitboard by_type[PIECE_TYPE_ALL];
 
     // Loaded in from fen string
-    Piece pieces[SQ_ALL];
     Color side_to_move;
     Square en_passant_sq;
     int rule50_half_moves;
     int move_counter;
-    CastlingRights castling_rights; // All rights
+    CastlingRights castling_rights; // All castling rights
 };
 
 std::ostream& operator<<(std::ostream& os, Board board);

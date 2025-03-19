@@ -3,6 +3,32 @@
 #include <sstream>
 #include <iostream>
 
+Board::Board() {
+    for (int i = 0; i < PIECE_TYPE_ALL; i++)
+        by_type[i] = 0ull;
+    for (int i = 0; i < COLOR_ALL; i++)
+        by_color[i] = 0ull;
+}
+
+void Board::set_piece(Square sq, Piece p) {
+    rem_piece(sq);
+    if (p != NO_PIECE) {
+        set_square(by_color[get_color(p)], sq);
+        set_square(by_type[get_type(p)], sq);
+    }
+}
+
+Piece Board::get_piece(Square sq) const {
+    if (get_square(by_type[PAWN], sq)) return make_piece(get_color(sq), PAWN);
+    if (get_square(by_type[KNIGHT], sq)) return make_piece(get_color(sq), KNIGHT);
+    if (get_square(by_type[BISHOP], sq)) return make_piece(get_color(sq), BISHOP);
+    if (get_square(by_type[ROOK], sq)) return make_piece(get_color(sq), ROOK);
+    if (get_square(by_type[QUEEN], sq)) return make_piece(get_color(sq), QUEEN);
+    if (get_square(by_type[KING], sq)) return make_piece(get_color(sq), KING);
+
+    return NO_PIECE;
+}
+
 Board& Board::load_from_fen(const std::string& fen) {
     std::istringstream ss(fen);
     int row = 7;
@@ -19,13 +45,13 @@ Board& Board::load_from_fen(const std::string& fen) {
         else if (cur == 'B') { set_piece(row, col, W_BISHOP); col++; }
         else if (cur == 'R') { set_piece(row, col, W_ROOK); col++; }
         else if (cur == 'Q') { set_piece(row, col, W_QUEEN); col++; }
-        else if (cur == 'K') { king_pos[WHITE] = Square(row * 8 + col); set_piece(row, col, W_KING); col++; }
+        else if (cur == 'K') { set_piece(row, col, W_KING); col++; }
         else if (cur == 'p') { set_piece(row, col, B_PAWN); col++; }
         else if (cur == 'n') { set_piece(row, col, B_KNIGHT); col++; }
         else if (cur == 'b') { set_piece(row, col, B_BISHOP); col++; }
         else if (cur == 'r') { set_piece(row, col, B_ROOK); col++; }
         else if (cur == 'q') { set_piece(row, col, B_QUEEN); col++; }
-        else if (cur == 'k') { king_pos[BLACK] = Square(row * 8 + col); set_piece(row, col, B_KING); col++; }
+        else if (cur == 'k') { set_piece(row, col, B_KING); col++; }
         else { // int
             for (int i = 0; i < cur - '0'; i++) {
                 set_piece(row, col, NO_PIECE);
@@ -67,14 +93,14 @@ Board& Board::make_move(Move move) {
     history.push_back(*this);  // Store current board state
 
     // Check for capture or pawn move (for 50 rule)
-    if ((pieces[move.from] == W_PAWN) || (pieces[move.to] != NO_PIECE)) rule50_half_moves = 0;
+    if (get_piece(move.from) == W_PAWN || (!get_piece(~(by_color[WHITE] | by_color[BLACK]), move.to))) rule50_half_moves = 0;
     else rule50_half_moves++;
 
     Square temp_en_passant_sq;
     // Update En passant square
-    if ((pieces[move.from] == W_PAWN) && (8 <= move.from) && (move.from <= 15) && (24 <= move.to) && (move.to <= 31))
+    if (get_piece(move.from) == W_PAWN && (8 <= move.from) && (move.from <= 15) && (24 <= move.to) && (move.to <= 31))
         temp_en_passant_sq = Square(move.from + 8);
-    else if ((pieces[move.from] == B_PAWN) && (48 <= move.from) && (move.from <= 55) && (32 <= move.to) && (move.to <= 39))
+    else if (get_piece(move.from) == B_PAWN && (48 <= move.from) && (move.from <= 55) && (32 <= move.to) && (move.to <= 39))
         temp_en_passant_sq = Square(move.from - 8);
     else
         temp_en_passant_sq = NO_SQ;
@@ -86,46 +112,44 @@ Board& Board::make_move(Move move) {
     // will do so anyways
     // Also, only moves rook because king move is implied on the
     // next block
-    if ((pieces[move.from] == W_KING) && (move.from == SQ_E1) && (move.to == SQ_G1))
-        { pieces[SQ_F1] = pieces[SQ_H1]; pieces[SQ_H1] = NO_PIECE; }
-    if ((pieces[move.from] == W_KING) && (move.from == SQ_E1) && (move.to == SQ_C1))
-        { pieces[SQ_D1] = pieces[SQ_A1]; pieces[SQ_A1] = NO_PIECE; }
-    if ((pieces[move.from] == B_KING) && (move.from == SQ_E8) && (move.to == SQ_G8))
-        { pieces[SQ_F8] = pieces[SQ_H8]; pieces[SQ_H8] = NO_PIECE; }
-    if ((pieces[move.from] == B_KING) && (move.from == SQ_E8) && (move.to == SQ_C8))
-        { pieces[SQ_D8] = pieces[SQ_A8]; pieces[SQ_A8] = NO_PIECE; }
+    if (get_piece(move.from) == W_KING && (move.from == SQ_E1) && (move.to == SQ_G1))
+        { set_piece(SQ_F1, W_ROOK); rem_piece(SQ_H1); }
+    if (get_piece(move.from) == W_KING && (move.from == SQ_E1) && (move.to == SQ_C1))
+        { set_piece(SQ_D1, W_ROOK); rem_piece(SQ_A1); }
+    if (get_piece(move.from) == B_KING && (move.from == SQ_E8) && (move.to == SQ_G8))
+        { set_piece(SQ_F8, B_ROOK); rem_piece(SQ_H8); }
+    if (get_piece(move.from) == B_KING && (move.from == SQ_E8) && (move.to == SQ_C8))
+        { set_piece(SQ_D8, B_ROOK); rem_piece(SQ_A8); }
 
     if (move.promotion == 0) {
         // Check for en passant
-        if ((pieces[move.from] == W_PAWN) && (move.to == en_passant_sq))
-            pieces[move.to - 8] = NO_PIECE;
-        else if ((pieces[move.from] == B_PAWN) && (move.to == en_passant_sq))
-            pieces[move.to + 8] = NO_PIECE;
+        if ((move.to == en_passant_sq) && get_piece(move.from) == W_PAWN) {
+            rem_piece(Square(move.to - 8));
+            rem_piece(Square(move.to - 8));
+        }
+        else if ((move.to == en_passant_sq) && get_piece(move.from) == B_PAWN) {
+            rem_piece(Square(move.to + 8));
+            rem_piece(Square(move.to + 8));
+        }
 
-        // Update king pos if king move
-        if (pieces[move.from] == W_KING)
-            king_pos[WHITE] = move.to;
-        else if (pieces[move.from] == B_KING)
-            king_pos[BLACK] = move.to;
-
-        pieces[move.to] = pieces[move.from];
+        set_piece(move.to, get_piece(move.from));
     }
     // Check for promotion
-    else if (move.promotion == 1) pieces[move.to] = side_to_move ? B_KNIGHT : W_KNIGHT;
-    else if (move.promotion == 2) pieces[move.to] = side_to_move ? B_BISHOP : W_BISHOP;
-    else if (move.promotion == 3) pieces[move.to] = side_to_move ? B_ROOK : W_ROOK;
-    else if (move.promotion == 4) pieces[move.to] = side_to_move ? B_QUEEN : W_QUEEN;
-    pieces[move.from] = NO_PIECE;
+    else if (move.promotion == 1) set_piece(move.to, side_to_move == WHITE ? W_KNIGHT : B_KNIGHT);
+    else if (move.promotion == 2) set_piece(move.to, side_to_move == WHITE ? W_BISHOP : B_BISHOP);
+    else if (move.promotion == 3) set_piece(move.to, side_to_move == WHITE ? W_ROOK : B_ROOK);
+    else if (move.promotion == 4) set_piece(move.to, side_to_move == WHITE ? W_QUEEN : B_QUEEN);
+    rem_piece(move.from);
 
 
     // !! Update !! (NOT CHECK!!) castling rights
-    if (((pieces[SQ_H1] != W_ROOK) || (pieces[SQ_E1] != W_KING)) && castling_rights.get_white_can_00())
+    if ((get_piece(SQ_H1) != W_ROOK || get_piece(SQ_E1) != W_KING) && castling_rights.get_white_can_00())
         castling_rights.reset_white_can_00();
-    if (((pieces[SQ_A1] != W_ROOK) || (pieces[SQ_E1] != W_KING)) && castling_rights.get_white_can_000())
+    if ((get_piece(SQ_A1) != W_ROOK || get_piece(SQ_E1) != W_KING) && castling_rights.get_white_can_000())
         castling_rights.reset_white_can_000();
-    if (((pieces[SQ_H8] != B_ROOK) || (pieces[SQ_E8] != B_KING)) && castling_rights.get_black_can_00())
+    if ((get_piece(SQ_H8) != B_ROOK || get_piece(SQ_E8) != B_KING) && castling_rights.get_black_can_00())
         castling_rights.reset_black_can_00();
-    if (((pieces[SQ_A8] != B_ROOK) || (pieces[SQ_E8] != B_KING)) && castling_rights.get_black_can_000())
+    if ((get_piece(SQ_A8) != B_ROOK || get_piece(SQ_E8) != B_KING) && castling_rights.get_black_can_000())
         castling_rights.reset_black_can_000();
 
     // Increment every time black moves
@@ -150,14 +174,14 @@ void Board::undo_move() {
 
 bool Board::is_square_attacked_by(Square sq, Color side) {
     Color _side_to_move = side_to_move;
-    Piece _pc_on_sq = pieces[sq];
+    Piece _pc_on_sq = get_piece(sq);
+    set_piece(sq, side == WHITE ? B_PAWN : W_PAWN);
     side_to_move = side;
-    pieces[sq] = side == WHITE ? B_PAWN : W_PAWN;
     if (side == WHITE) {
         for (Move move : gen_pseudolegal_moves()) {
             if (is_white(move.from) && (move.to == sq)) {
                 side_to_move = _side_to_move;
-                pieces[sq] = _pc_on_sq;
+                set_piece(sq, _pc_on_sq);
                 return true;
             }
         }
@@ -166,25 +190,25 @@ bool Board::is_square_attacked_by(Square sq, Color side) {
         for (Move move : gen_pseudolegal_moves()) {
             if (is_black(move.from) && (move.to == sq)) {
                 side_to_move = _side_to_move;
-                pieces[sq] = _pc_on_sq;
+                set_piece(sq, _pc_on_sq);
                 return true;
             }
         }
     }
     side_to_move = _side_to_move;
-    pieces[sq] = _pc_on_sq;
+    set_piece(sq, _pc_on_sq);
     return false;
 }
 
 // !! ONLY CHECK FOR CHECKS IS THE CASTLING MIDDLE SQUARE !!
 MoveList Board::gen_pseudolegal_moves_sq(Square sq) {
-    Piece piece = pieces[sq];
+    Piece piece = get_piece(sq);
     MoveList res;
     int col, row;
 
     if (piece == W_PAWN) {
-        if (pieces[sq + 8] == NO_PIECE) {
-            if ((int)(sq / 8) == 6) {
+        if (get_piece(sq + 8) == NO_PIECE) {
+            if (get_row(sq) == 6) {
                 res.push_back(Move(sq, Square(sq + 8), 1));
                 res.push_back(Move(sq, Square(sq + 8), 2));
                 res.push_back(Move(sq, Square(sq + 8), 3));
@@ -192,12 +216,12 @@ MoveList Board::gen_pseudolegal_moves_sq(Square sq) {
             } else {
                 res.push_back(Move(sq, Square(sq + 8)));
             }
-            if (((int)(sq / 8) == 1) && (pieces[sq + 16] == NO_PIECE)) {
+            if (get_row(sq) == 1 && get_piece(sq + 16) == NO_PIECE) {
                 res.push_back(Move(sq, Square(sq + 16)));
             }
         }
-        if ((sq % 8 != 0) && (is_black(pieces[sq + 7]))) {
-            if ((int)(sq / 8) == 6) {
+        if (get_col(sq) != 0 && is_black(get_piece(sq + 7))) {
+            if (get_row(sq) == 6) {
                 res.push_back(Move(sq, Square(sq + 7), 1));
                 res.push_back(Move(sq, Square(sq + 7), 2));
                 res.push_back(Move(sq, Square(sq + 7), 3));
@@ -206,8 +230,8 @@ MoveList Board::gen_pseudolegal_moves_sq(Square sq) {
                 res.push_back(Move(sq, Square(sq + 7)));
             }
         }
-        if ((sq % 8 != 7) && (is_black(pieces[sq + 9]))) {
-            if ((int)(sq / 8) == 6) {
+        if (get_col(sq) != 7 && is_black(get_piece(sq + 9))) {
+            if (get_row(sq) == 6) {
                 res.push_back(Move(sq, Square(sq + 9), 1));
                 res.push_back(Move(sq, Square(sq + 9), 2));
                 res.push_back(Move(sq, Square(sq + 9), 3));
@@ -216,14 +240,14 @@ MoveList Board::gen_pseudolegal_moves_sq(Square sq) {
                 res.push_back(Move(sq, Square(sq + 9)));
             }
         }
-        if (((sq + 7) == en_passant_sq) && (sq % 8 != 0))
+        if (sq + 7 == en_passant_sq && get_col(sq) != 0)
             res.push_back(Move(sq, Square(sq + 7)));
-        if (((sq + 9) == en_passant_sq) && (sq % 8 != 7))
+        if (sq + 9 == en_passant_sq && get_col(sq) != 7)
             res.push_back(Move(sq, Square(sq + 9)));
     }
     else if (piece == B_PAWN) {
-        if (pieces[sq - 8] == NO_PIECE) {
-            if ((int)(sq / 8) == 1) {
+        if (get_piece(sq - 8) == NO_PIECE) {
+            if (get_row(sq) == 1) {
                 res.push_back(Move(sq, Square(sq - 8), 1));
                 res.push_back(Move(sq, Square(sq - 8), 2));
                 res.push_back(Move(sq, Square(sq - 8), 3));
@@ -231,12 +255,12 @@ MoveList Board::gen_pseudolegal_moves_sq(Square sq) {
             } else {
                 res.push_back(Move(sq, Square(sq - 8)));
             }
-            if (((int)(sq / 8) == 6) && (pieces[sq - 16] == NO_PIECE)) {
+            if (get_row(sq) == 6 && get_piece(sq - 16) == NO_PIECE) {
                 res.push_back(Move(sq, Square(sq - 16)));
             }
         }
-        if ((sq % 8 != 7) && (is_white(pieces[sq - 7]))) {
-            if ((int)(sq / 8) == 1) {
+        if (get_col(sq) != 7 && is_white(get_piece(sq - 7))) {
+            if (get_row(sq) == 1) {
                 res.push_back(Move(sq, Square(sq - 7), 1));
                 res.push_back(Move(sq, Square(sq - 7), 2));
                 res.push_back(Move(sq, Square(sq - 7), 3));
@@ -245,8 +269,8 @@ MoveList Board::gen_pseudolegal_moves_sq(Square sq) {
                 res.push_back(Move(sq, Square(sq - 7)));
             }
         }
-        if ((sq % 8 != 0) && (is_white(pieces[sq - 9]))) {
-            if ((int)(sq / 8) == 1) {
+        if (get_col(sq) != 0 && is_white(get_piece(sq - 9))) {
+            if (get_row(sq) == 1) {
                 res.push_back(Move(sq, Square(sq - 9), 1));
                 res.push_back(Move(sq, Square(sq - 9), 2));
                 res.push_back(Move(sq, Square(sq - 9), 3));
@@ -255,222 +279,223 @@ MoveList Board::gen_pseudolegal_moves_sq(Square sq) {
                 res.push_back(Move(sq, Square(sq - 9)));
             }
         }
-        if (((sq - 7) == en_passant_sq) && (sq % 8 != 7))
+        if (sq - 7 == en_passant_sq && get_col(sq) != 7)
             res.push_back(Move(sq, Square(sq - 7)));
-        if (((sq - 9) == en_passant_sq) && (sq % 8 != 0))
+        if (sq - 9 == en_passant_sq && get_col(sq) != 0)
             res.push_back(Move(sq, Square(sq - 9)));
     }
     else if (piece == W_KNIGHT) {
-        if ((int)(sq / 8) != 0 && (int)(sq / 8) != 1 && (int)(sq % 8) != 0 && !is_white(Square(sq - 17)))
+        if (get_row(sq) != 0 && get_row(sq) != 1 && get_col(sq) != 0 && !is_white(Square(sq - 17)))
             res.push_back(Move(sq, Square(sq - 17)));
-        if ((int)(sq / 8) != 0 && (int)(sq % 8) != 1 && (int)(sq % 8) != 0 && !is_white(Square(sq - 10)))
+        if (get_row(sq) != 0 && get_col(sq) != 1 && get_col(sq) != 0 && !is_white(Square(sq - 10)))
             res.push_back(Move(sq, Square(sq - 10)));
-        if ((int)(sq / 8) != 7 && (int)(sq % 8) != 1 && (int)(sq % 8) != 0 && !is_white(Square(sq + 6)))
+        if (get_row(sq) != 7 && get_col(sq) != 1 && get_col(sq) != 0 && !is_white(Square(sq + 6)))
             res.push_back(Move(sq, Square(sq + 6)));
-        if ((int)(sq / 8) != 7 && (int)(sq / 8) != 6 && (int)(sq % 8) != 0 && !is_white(Square(sq + 15)))
+        if (get_row(sq) != 7 && get_row(sq) != 6 && get_col(sq) != 0 && !is_white(Square(sq + 15)))
             res.push_back(Move(sq, Square(sq + 15)));
-        if ((int)(sq / 8) != 7 && (int)(sq / 8) != 6 && (int)(sq % 8) != 7 && !is_white(Square(sq + 17)))
+        if (get_row(sq) != 7 && get_row(sq) != 6 && get_col(sq) != 7 && !is_white(Square(sq + 17)))
             res.push_back(Move(sq, Square(sq + 17)));
-        if ((int)(sq / 8) != 7 && (int)(sq % 8) != 6 && (int)(sq % 8) != 7 && !is_white(Square(sq + 10)))
+        if (get_row(sq) != 7 && get_col(sq) != 6 && get_col(sq) != 7 && !is_white(Square(sq + 10)))
             res.push_back(Move(sq, Square(sq + 10)));
-        if ((int)(sq / 8) != 0 && (int)(sq % 8) != 6 && (int)(sq % 8) != 7 && !is_white(Square(sq - 6)))
+        if (get_row(sq) != 0 && get_col(sq) != 6 && get_col(sq) != 7 && !is_white(Square(sq - 6)))
             res.push_back(Move(sq, Square(sq - 6)));
-        if ((int)(sq / 8) != 0 && (int)(sq / 8) != 1 && (int)(sq % 8) != 7 && !is_white(Square(sq - 15)))
+        if (get_row(sq) != 0 && get_row(sq) != 1 && get_col(sq) != 7 && !is_white(Square(sq - 15)))
             res.push_back(Move(sq, Square(sq - 15)));
     }
     else if (piece == B_KNIGHT) {
-        if ((int)(sq / 8) != 0 && (int)(sq / 8) != 1 && (int)(sq % 8) != 0 && !is_black(Square(sq - 17)))
+        if (get_row(sq) != 0 && get_row(sq) != 1 && get_col(sq) != 0 && !is_black(Square(sq - 17)))
             res.push_back(Move(sq, Square(sq - 17)));
-        if ((int)(sq / 8) != 0 && (int)(sq % 8) != 1 && (int)(sq % 8) != 0 && !is_black(Square(sq - 10)))
+        if (get_row(sq) != 0 && get_col(sq) != 1 && get_col(sq) != 0 && !is_black(Square(sq - 10)))
             res.push_back(Move(sq, Square(sq - 10)));
-        if ((int)(sq / 8) != 7 && (int)(sq % 8) != 1 && (int)(sq % 8) != 0 && !is_black(Square(sq + 6)))
+        if (get_row(sq) != 7 && get_col(sq) != 1 && get_col(sq) != 0 && !is_black(Square(sq + 6)))
             res.push_back(Move(sq, Square(sq + 6)));
-        if ((int)(sq / 8) != 7 && (int)(sq / 8) != 6 && (int)(sq % 8) != 0 && !is_black(Square(sq + 15)))
+        if (get_row(sq) != 7 && get_row(sq) != 6 && get_col(sq) != 0 && !is_black(Square(sq + 15)))
             res.push_back(Move(sq, Square(sq + 15)));
-        if ((int)(sq / 8) != 7 && (int)(sq / 8) != 6 && (int)(sq % 8) != 7 && !is_black(Square(sq + 17)))
+        if (get_row(sq) != 7 && get_row(sq) != 6 && get_col(sq) != 7 && !is_black(Square(sq + 17)))
             res.push_back(Move(sq, Square(sq + 17)));
-        if ((int)(sq / 8) != 7 && (int)(sq % 8) != 6 && (int)(sq % 8) != 7 && !is_black(Square(sq + 10)))
+        if (get_row(sq) != 7 && get_col(sq) != 6 && get_col(sq) != 7 && !is_black(Square(sq + 10)))
             res.push_back(Move(sq, Square(sq + 10)));
-        if ((int)(sq / 8) != 0 && (int)(sq % 8) != 6 && (int)(sq % 8) != 7 && !is_black(Square(sq - 6)))
+        if (get_row(sq) != 0 && get_col(sq) != 6 && get_col(sq) != 7 && !is_black(Square(sq - 6)))
             res.push_back(Move(sq, Square(sq - 6)));
-        if ((int)(sq / 8) != 0 && (int)(sq / 8) != 1 && (int)(sq % 8) != 7 && !is_black(Square(sq - 15)))
+        if (get_row(sq) != 0 && get_row(sq) != 1 && get_col(sq) != 7 && !is_black(Square(sq - 15)))
             res.push_back(Move(sq, Square(sq - 15)));
     }
     else if (piece == W_BISHOP) {
-        for (row = (int)(sq / 8) - 1, col = sq % 8 - 1; row >= 0 && col >= 0; row--, col--) {
+        for (row = get_row(sq) - 1, col = get_col(sq) - 1; row >= 0 && col >= 0; row--, col--) {
             if (is_white(row, col)) break;
             res.push_back(Move(sq, Square(row * 8 + col)));
             if (is_black(row, col)) break;
         }
-        for (row = (int)(sq / 8) + 1, col = sq % 8 - 1; row <= 7 && col >= 0; row++, col--) {
+        for (row = get_row(sq) + 1, col = get_col(sq) - 1; row <= 7 && col >= 0; row++, col--) {
             if (is_white(row, col)) break;
             res.push_back(Move(sq, Square(row * 8 + col)));
             if (is_black(row, col)) break;
         }
-        for (row = (int)(sq / 8) + 1, col = sq % 8 + 1; row <= 7 && col <= 7; row++, col++) {
+        for (row = get_row(sq) + 1, col = get_col(sq) + 1; row <= 7 && col <= 7; row++, col++) {
             if (is_white(row, col)) break;
             res.push_back(Move(sq, Square(row * 8 + col)));
             if (is_black(row, col)) break;
         }
-        for (row = (int)(sq / 8) - 1, col = sq % 8 + 1; row >= 0 && col <= 7; row--, col++) {
+        for (row = get_row(sq) - 1, col = get_col(sq) + 1; row >= 0 && col <= 7; row--, col++) {
             if (is_white(row, col)) break;
             res.push_back(Move(sq, Square(row * 8 + col)));
             if (is_black(row, col)) break;
         }
     }
     else if (piece == B_BISHOP) {
-        for (row = (int)(sq / 8) - 1, col = sq % 8 - 1; row >= 0 && col >= 0; row--, col--) {
+        for (row = get_row(sq) - 1, col = get_col(sq) - 1; row >= 0 && col >= 0; row--, col--) {
             if (is_black(row, col)) break;
             res.push_back(Move(sq, Square(row * 8 + col)));
             if (is_white(row, col)) break;
         }
-        for (row = (int)(sq / 8) + 1, col = sq % 8 - 1; row <= 7 && col >= 0; row++, col--) {
+        for (row = get_row(sq) + 1, col = get_col(sq) - 1; row <= 7 && col >= 0; row++, col--) {
             if (is_black(row, col)) break;
             res.push_back(Move(sq, Square(row * 8 + col)));
             if (is_white(row, col)) break;
         }
-        for (row = (int)(sq / 8) + 1, col = sq % 8 + 1; row <= 7 && col <= 7; row++, col++) {
+        for (row = get_row(sq) + 1, col = get_col(sq) + 1; row <= 7 && col <= 7; row++, col++) {
             if (is_black(row, col)) break;
             res.push_back(Move(sq, Square(row * 8 + col)));
             if (is_white(row, col)) break;
         }
-        for (row = (int)(sq / 8) - 1, col = sq % 8 + 1; row >= 0 && col <= 7; row--, col++) {
+        for (row = get_row(sq) - 1, col = get_col(sq) + 1; row >= 0 && col <= 7; row--, col++) {
             if (is_black(row, col)) break;
             res.push_back(Move(sq, Square(row * 8 + col)));
             if (is_white(row, col)) break;
         }
     }
     else if (piece == W_ROOK) {
-        for (row = (int)(sq / 8) - 1, col = sq % 8; row >= 0; row--) {
+
+        for (row = get_row(sq) - 1, col = get_col(sq); row >= 0; row--) {
             if (is_white(row, col)) break;
             res.push_back(Move(sq, Square(row * 8 + col)));
             if (is_black(row, col)) break;
         }
-        for (row = (int)(sq / 8), col = sq % 8 - 1; col >= 0; col--) {
+        for (row = get_row(sq), col = get_col(sq) - 1; col >= 0; col--) {
             if (is_white(row, col)) break;
             res.push_back(Move(sq, Square(row * 8 + col)));
             if (is_black(row, col)) break;
         }
-        for (row = (int)(sq / 8) + 1, col = sq % 8; row <= 7; row++) {
+        for (row = get_row(sq) + 1, col = get_col(sq); row <= 7; row++) {
             if (is_white(row, col)) break;
             res.push_back(Move(sq, Square(row * 8 + col)));
             if (is_black(row, col)) break;
         }
-        for (row = (int)(sq / 8), col = sq % 8 + 1; col <= 7; col++) {
+        for (row = get_row(sq), col = get_col(sq) + 1; col <= 7; col++) {
             if (is_white(row, col)) break;
             res.push_back(Move(sq, Square(row * 8 + col)));
             if (is_black(row, col)) break;
         }
     }
     else if (piece == B_ROOK) {
-        for (row = (int)(sq / 8) - 1, col = sq % 8; row >= 0; row--) {
+        for (row = get_row(sq) - 1, col = get_col(sq); row >= 0; row--) {
             if (is_black(row, col)) break;
             res.push_back(Move(sq, Square(row * 8 + col)));
             if (is_white(row, col)) break;
         }
-        for (row = (int)(sq / 8), col = sq % 8 - 1; col >= 0; col--) {
+        for (row = get_row(sq), col = get_col(sq) - 1; col >= 0; col--) {
             if (is_black(row, col)) break;
             res.push_back(Move(sq, Square(row * 8 + col)));
             if (is_white(row, col)) break;
         }
-        for (row = (int)(sq / 8) + 1, col = sq % 8; row <= 7; row++) {
+        for (row = get_row(sq) + 1, col = get_col(sq); row <= 7; row++) {
             if (is_black(row, col)) break;
             res.push_back(Move(sq, Square(row * 8 + col)));
             if (is_white(row, col)) break;
         }
-        for (row = (int)(sq / 8), col = sq % 8 + 1; col <= 7; col++) {
+        for (row = get_row(sq), col = get_col(sq) + 1; col <= 7; col++) {
             if (is_black(row, col)) break;
             res.push_back(Move(sq, Square(row * 8 + col)));
             if (is_white(row, col)) break;
         }
     }
     else if (piece == W_QUEEN) {
-        for (row = (int)(sq / 8) - 1, col = sq % 8 - 1; row >= 0 && col >= 0; row--, col--) {
+        for (row = get_row(sq) - 1, col = get_col(sq) - 1; row >= 0 && col >= 0; row--, col--) {
             if (is_white(row, col)) break;
             res.push_back(Move(sq, Square(row * 8 + col)));
             if (is_black(row, col)) break;
         }
-        for (row = (int)(sq / 8) + 1, col = sq % 8 - 1; row <= 7 && col >= 0; row++, col--) {
+        for (row = get_row(sq) + 1, col = get_col(sq) - 1; row <= 7 && col >= 0; row++, col--) {
             if (is_white(row, col)) break;
             res.push_back(Move(sq, Square(row * 8 + col)));
             if (is_black(row, col)) break;
         }
-        for (row = (int)(sq / 8) + 1, col = sq % 8 + 1; row <= 7 && col <= 7; row++, col++) {
+        for (row = get_row(sq) + 1, col = get_col(sq) + 1; row <= 7 && col <= 7; row++, col++) {
             if (is_white(row, col)) break;
             res.push_back(Move(sq, Square(row * 8 + col)));
             if (is_black(row, col)) break;
         }
-        for (row = (int)(sq / 8) - 1, col = sq % 8 + 1; row >= 0 && col <= 7; row--, col++) {
+        for (row = get_row(sq) - 1, col = get_col(sq) + 1; row >= 0 && col <= 7; row--, col++) {
             if (is_white(row, col)) break;
             res.push_back(Move(sq, Square(row * 8 + col)));
             if (is_black(row, col)) break;
         }
-        for (row = (int)(sq / 8) - 1, col = sq % 8; row >= 0; row--) {
+        for (row = get_row(sq) - 1, col = get_col(sq); row >= 0; row--) {
             if (is_white(row, col)) break;
             res.push_back(Move(sq, Square(row * 8 + col)));
             if (is_black(row, col)) break;
         }
-        for (row = (int)(sq / 8), col = sq % 8 - 1; col >= 0; col--) {
+        for (row = get_row(sq), col = get_col(sq) - 1; col >= 0; col--) {
             if (is_white(row, col)) break;
             res.push_back(Move(sq, Square(row * 8 + col)));
             if (is_black(row, col)) break;
         }
-        for (row = (int)(sq / 8) + 1, col = sq % 8; row <= 7; row++) {
+        for (row = get_row(sq) + 1, col = get_col(sq); row <= 7; row++) {
             if (is_white(row, col)) break;
             res.push_back(Move(sq, Square(row * 8 + col)));
             if (is_black(row, col)) break;
         }
-        for (row = (int)(sq / 8), col = sq % 8 + 1; col <= 7; col++) {
+        for (row = get_row(sq), col = get_col(sq) + 1; col <= 7; col++) {
             if (is_white(row, col)) break;
             res.push_back(Move(sq, Square(row * 8 + col)));
             if (is_black(row, col)) break;
         }
     }
     else if (piece == B_QUEEN) {
-        for (row = (int)(sq / 8) - 1, col = sq % 8 - 1; row >= 0 && col >= 0; row--, col--) {
+        for (row = get_row(sq) - 1, col = get_col(sq) - 1; row >= 0 && col >= 0; row--, col--) {
             if (is_black(row, col)) break;
             res.push_back(Move(sq, Square(row * 8 + col)));
             if (is_white(row, col)) break;
         }
-        for (row = (int)(sq / 8) + 1, col = sq % 8 - 1; row <= 7 && col >= 0; row++, col--) {
+        for (row = get_row(sq) + 1, col = get_col(sq) - 1; row <= 7 && col >= 0; row++, col--) {
             if (is_black(row, col)) break;
             res.push_back(Move(sq, Square(row * 8 + col)));
             if (is_white(row, col)) break;
         }
-        for (row = (int)(sq / 8) + 1, col = sq % 8 + 1; row <= 7 && col <= 7; row++, col++) {
+        for (row = get_row(sq) + 1, col = get_col(sq) + 1; row <= 7 && col <= 7; row++, col++) {
             if (is_black(row, col)) break;
             res.push_back(Move(sq, Square(row * 8 + col)));
             if (is_white(row, col)) break;
         }
-        for (row = (int)(sq / 8) - 1, col = sq % 8 + 1; row >= 0 && col <= 7; row--, col++) {
+        for (row = get_row(sq) - 1, col = get_col(sq) + 1; row >= 0 && col <= 7; row--, col++) {
             if (is_black(row, col)) break;
             res.push_back(Move(sq, Square(row * 8 + col)));
             if (is_white(row, col)) break;
         }
-        for (row = (int)(sq / 8) - 1, col = sq % 8; row >= 0; row--) {
+        for (row = get_row(sq) - 1, col = get_col(sq); row >= 0; row--) {
             if (is_black(row, col)) break;
             res.push_back(Move(sq, Square(row * 8 + col)));
             if (is_white(row, col)) break;
         }
-        for (row = (int)(sq / 8), col = sq % 8 - 1; col >= 0; col--) {
+        for (row = get_row(sq), col = get_col(sq) - 1; col >= 0; col--) {
             if (is_black(row, col)) break;
             res.push_back(Move(sq, Square(row * 8 + col)));
             if (is_white(row, col)) break;
         }
-        for (row = (int)(sq / 8) + 1, col = sq % 8; row <= 7; row++) {
+        for (row = get_row(sq) + 1, col = get_col(sq); row <= 7; row++) {
             if (is_black(row, col)) break;
             res.push_back(Move(sq, Square(row * 8 + col)));
             if (is_white(row, col)) break;
         }
-        for (row = (int)(sq / 8), col = sq % 8 + 1; col <= 7; col++) {
+        for (row = get_row(sq), col = get_col(sq) + 1; col <= 7; col++) {
             if (is_black(row, col)) break;
             res.push_back(Move(sq, Square(row * 8 + col)));
             if (is_white(row, col)) break;
         }
     }
     else if (piece == W_KING) {
-        row = (int)(sq / 8);
-        col = sq % 8;
+        row = get_row(sq);
+        col = get_col(sq);
         if (row > 0 && col > 0 && !is_white(row - 1, col - 1)) res.push_back(Move(sq, Square((row - 1) * 8 + (col - 1))));
         if (           col > 0 && !is_white(row    , col - 1)) res.push_back(Move(sq, Square((row    ) * 8 + (col - 1))));
         if (row < 7 && col > 0 && !is_white(row + 1, col - 1)) res.push_back(Move(sq, Square((row + 1) * 8 + (col - 1))));
@@ -482,14 +507,14 @@ MoveList Board::gen_pseudolegal_moves_sq(Square sq) {
     
         // Castling
         // No need to check for G1 because legal move detection will do so for us
-        if (castling_rights.get_white_can_00() && pieces[SQ_F1] == NO_PIECE && pieces[SQ_G1] == NO_PIECE && !is_square_attacked_by(SQ_F1, BLACK) && !is_square_attacked_by(SQ_E1, BLACK))
+        if (castling_rights.get_white_can_00() && get_piece(SQ_F1) == NO_PIECE && get_piece(SQ_G1) == NO_PIECE && !is_square_attacked_by(SQ_F1, BLACK) && !is_square_attacked_by(SQ_E1, BLACK))
             res.push_back(Move(SQ_E1, SQ_G1));
-        if (castling_rights.get_white_can_000() && pieces[SQ_D1] == NO_PIECE && pieces[SQ_C1] == NO_PIECE && pieces[SQ_B1] == NO_PIECE && !is_square_attacked_by(SQ_D1, BLACK) && !is_square_attacked_by(SQ_E1, BLACK))
+        if (castling_rights.get_white_can_000() && get_piece(SQ_D1) == NO_PIECE && get_piece(SQ_C1) == NO_PIECE && get_piece(SQ_B1) == NO_PIECE && !is_square_attacked_by(SQ_D1, BLACK) && !is_square_attacked_by(SQ_E1, BLACK))
             res.push_back(Move(SQ_E1, SQ_C1));
     }
     else if (piece == B_KING) {
-        row = (int)(sq / 8);
-        col = sq % 8;
+        row = get_row(sq);
+        col = get_col(sq);
         if (row > 0 && col > 0 && !is_black(row - 1, col - 1)) res.push_back(Move(sq, Square((row - 1) * 8 + (col - 1))));
         if (           col > 0 && !is_black(row    , col - 1)) res.push_back(Move(sq, Square((row    ) * 8 + (col - 1))));
         if (row < 7 && col > 0 && !is_black(row + 1, col - 1)) res.push_back(Move(sq, Square((row + 1) * 8 + (col - 1))));
@@ -500,9 +525,9 @@ MoveList Board::gen_pseudolegal_moves_sq(Square sq) {
         if (row > 0            && !is_black(row - 1, col    )) res.push_back(Move(sq, Square((row - 1) * 8 + (col    ))));            
 
         // Castling
-        if (castling_rights.get_black_can_00() && pieces[SQ_F8] == NO_PIECE && pieces[SQ_G8] == NO_PIECE && !is_square_attacked_by(SQ_F8, WHITE) && !is_square_attacked_by(SQ_E8, WHITE))
+        if (castling_rights.get_black_can_00() && get_piece(SQ_F8) == NO_PIECE && get_piece(SQ_G8) == NO_PIECE && !is_square_attacked_by(SQ_F8, WHITE) && !is_square_attacked_by(SQ_E8, WHITE))
             res.push_back(Move(SQ_E8, SQ_G8));
-        if (castling_rights.get_black_can_000() && pieces[SQ_D8] == NO_PIECE && pieces[SQ_C8] == NO_PIECE && pieces[SQ_B8] == NO_PIECE && !is_square_attacked_by(SQ_D8, WHITE) && !is_square_attacked_by(SQ_E8, WHITE))
+        if (castling_rights.get_black_can_000() && get_piece(SQ_D8) == NO_PIECE && get_piece(SQ_C8) == NO_PIECE && get_piece(SQ_B8) == NO_PIECE && !is_square_attacked_by(SQ_D8, WHITE) && !is_square_attacked_by(SQ_E8, WHITE))
             res.push_back(Move(SQ_E8, SQ_C8));
     }
 
@@ -529,7 +554,7 @@ MoveList Board::gen_legal_moves() {
 
     for (Move move : gen_pseudolegal_moves()) {
         make_move(move);
-        if (!is_square_attacked_by(get_king_sq(safe_king_color), side_to_move))
+        if (!is_square_attacked_by(Square(lsb(by_type[KING] & by_color[safe_king_color])), side_to_move))
             res.push_back(move);
         undo_move();
     }
