@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-enum Square {
+enum Square : int {
     SQ_A1, SQ_B1, SQ_C1, SQ_D1, SQ_E1, SQ_F1, SQ_G1, SQ_H1,
     SQ_A2, SQ_B2, SQ_C2, SQ_D2, SQ_E2, SQ_F2, SQ_G2, SQ_H2,
     SQ_A3, SQ_B3, SQ_C3, SQ_D3, SQ_E3, SQ_F3, SQ_G3, SQ_H3,
@@ -13,6 +13,8 @@ enum Square {
     SQ_A8, SQ_B8, SQ_C8, SQ_D8, SQ_E8, SQ_F8, SQ_G8, SQ_H8,
     SQ_ALL, NO_SQ,
 };
+
+constexpr bool is_ok(Square sq) { return (SQ_A1 <= sq) && (sq <= SQ_H8); }
 
 using Bitboard = uint64_t;
 
@@ -25,6 +27,8 @@ inline Bitboard& operator|=(Bitboard& b, Square s) { return b = b | s; }
 inline Bitboard operator-(Bitboard b1, Square b2) { return b1 - square_to_bb(b2); }
 inline Bitboard& operator-=(Bitboard& b1, Square b2) { return b1 -= square_to_bb(b2); }
 
+inline Bitboard operator|(Square s1, Square s2) { return square_to_bb(s1) | square_to_bb(s2); }
+
 inline Square operator+(Square s, int i) { return Square(int(s) + i); }
 inline Square operator-(Square s, int i) { return Square(int(s) - i); }
 
@@ -36,3 +40,6 @@ constexpr int get_row(Square sq) { return sq / 8; }
 constexpr int get_col(Square sq) { return sq % 8; }
 
 inline int lsb(Bitboard b) { return __builtin_ctzll(b); }
+inline void pop_lsb(Bitboard& b) { b &= b - 1; }
+
+void print_bb(Bitboard bb);

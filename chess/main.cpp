@@ -1,5 +1,6 @@
 #include "board.h"
 #include "test.h"
+#include "bitboard.h"
 
 #include <iostream>
 
