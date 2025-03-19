@@ -75,11 +75,11 @@ public:
     void rem_piece(Square sq) { if (get_piece(sq) != NO_PIECE) { clear_square(by_color[get_color(get_piece(sq))], sq); clear_square(by_type[get_type(get_piece(sq))], sq); } }
     Piece get_piece(int row, int col) const { return get_piece(Square(row * 8 + col)); }
     Piece get_piece(Square sq) const;
-    static Piece make_piece(Color c, PieceType p) { return Piece(c * 6 + p); }
-    static PieceType get_type(Piece p) { return PieceType(p % 6); }
-    static Color get_color(Piece p) { return is_white(p) ? WHITE : BLACK; }
-    static bool is_white(Piece p) { return p < 6; }
-    static bool is_black(Piece p) { return (p >= 6) && (p <= 11); }
+    static constexpr Piece make_piece(Color c, PieceType p) { return Piece(c * 6 + p); }
+    static constexpr PieceType get_type(Piece p) { return PieceType(p % 6); }
+    static constexpr Color get_color(Piece p) { return is_white(p) ? WHITE : BLACK; }
+    static constexpr bool is_white(Piece p) { return p < 6; }
+    static constexpr bool is_black(Piece p) { return (p >= 6) && (p <= 11); }
     PieceType get_type(Square sq) const { return get_type(get_piece(sq)); }
     Color get_color(Square sq) const { return is_white(sq) ? WHITE : BLACK; }
     bool is_white(Square sq) const { return get_square(by_color[WHITE], sq) ? true : false; }
@@ -88,6 +88,8 @@ public:
     bool is_black(int row, int col) const { return is_black(Square(row * 8 + col)); }
     Board& make_move(Move move);
     void undo_move();
+
+    bool is_sq_piece(Square sq, Piece piece) const { return by_color[get_color(piece)] & by_type[get_type(piece)] & sq; }
 
     bool is_square_attacked_by(Square sq, Color side);
 

@@ -184,14 +184,14 @@ Board& Board::make_move(Move move) {
     history.push_back(*this);  // Store current board state
 
     // Check for capture or pawn move (for 50 rule)
-    if (get_piece(move.from) == W_PAWN || (!get_piece(~(by_color[WHITE] | by_color[BLACK]), move.to))) rule50_half_moves = 0;
+    if (is_sq_piece(move.from, W_PAWN) || ((by_color[WHITE] | by_color[BLACK]) & move.to)) rule50_half_moves = 0;
     else rule50_half_moves++;
 
     Square temp_en_passant_sq;
     // Update En passant square
-    if (get_piece(move.from) == W_PAWN && (8 <= move.from) && (move.from <= 15) && (24 <= move.to) && (move.to <= 31))
+    if (is_sq_piece(move.from, W_PAWN) && (8 <= move.from) && (move.from <= 15) && (24 <= move.to) && (move.to <= 31))
         temp_en_passant_sq = Square(move.from + 8);
-    else if (get_piece(move.from) == B_PAWN && (48 <= move.from) && (move.from <= 55) && (32 <= move.to) && (move.to <= 39))
+    else if (is_sq_piece(move.from, B_PAWN) && (48 <= move.from) && (move.from <= 55) && (32 <= move.to) && (move.to <= 39))
         temp_en_passant_sq = Square(move.from - 8);
     else
         temp_en_passant_sq = NO_SQ;
@@ -203,22 +203,22 @@ Board& Board::make_move(Move move) {
     // will do so anyways
     // Also, only moves rook because king move is implied on the
     // next block
-    if (get_piece(move.from) == W_KING && (move.from == SQ_E1) && (move.to == SQ_G1))
+    if (is_sq_piece(move.from, W_KING) && (move.from == SQ_E1) && (move.to == SQ_G1))
         { set_piece(SQ_F1, W_ROOK); rem_piece(SQ_H1); }
-    if (get_piece(move.from) == W_KING && (move.from == SQ_E1) && (move.to == SQ_C1))
+    if (is_sq_piece(move.from, W_KING) && (move.from == SQ_E1) && (move.to == SQ_C1))
         { set_piece(SQ_D1, W_ROOK); rem_piece(SQ_A1); }
-    if (get_piece(move.from) == B_KING && (move.from == SQ_E8) && (move.to == SQ_G8))
+    if (is_sq_piece(move.from, B_KING) && (move.from == SQ_E8) && (move.to == SQ_G8))
         { set_piece(SQ_F8, B_ROOK); rem_piece(SQ_H8); }
-    if (get_piece(move.from) == B_KING && (move.from == SQ_E8) && (move.to == SQ_C8))
+    if (is_sq_piece(move.from, B_KING) && (move.from == SQ_E8) && (move.to == SQ_C8))
         { set_piece(SQ_D8, B_ROOK); rem_piece(SQ_A8); }
 
     if (move.promotion == 0) {
         // Check for en passant
-        if ((move.to == en_passant_sq) && get_piece(move.from) == W_PAWN) {
+        if ((move.to == en_passant_sq) && is_sq_piece(move.from, W_PAWN)) {
             rem_piece(Square(move.to - 8));
             rem_piece(Square(move.to - 8));
         }
-        else if ((move.to == en_passant_sq) && get_piece(move.from) == B_PAWN) {
+        else if ((move.to == en_passant_sq) && is_sq_piece(move.from, B_PAWN)) {
             rem_piece(Square(move.to + 8));
             rem_piece(Square(move.to + 8));
         }
@@ -234,13 +234,13 @@ Board& Board::make_move(Move move) {
 
 
     // !! Update !! (NOT CHECK!!) castling rights
-    if ((get_piece(SQ_H1) != W_ROOK || get_piece(SQ_E1) != W_KING) && castling_rights.get_white_can_00())
+    if ((!is_sq_piece(SQ_H1, W_ROOK) || !is_sq_piece(SQ_E1, W_KING)) && castling_rights.get_white_can_00())
         castling_rights.reset_white_can_00();
-    if ((get_piece(SQ_A1) != W_ROOK || get_piece(SQ_E1) != W_KING) && castling_rights.get_white_can_000())
+    if ((!is_sq_piece(SQ_A1, W_ROOK) || !is_sq_piece(SQ_E1, W_KING)) && castling_rights.get_white_can_000())
         castling_rights.reset_white_can_000();
-    if ((get_piece(SQ_H8) != B_ROOK || get_piece(SQ_E8) != B_KING) && castling_rights.get_black_can_00())
+    if ((!is_sq_piece(SQ_H8, B_ROOK) || !is_sq_piece(SQ_E8, B_KING)) && castling_rights.get_black_can_00())
         castling_rights.reset_black_can_00();
-    if ((get_piece(SQ_A8) != B_ROOK || get_piece(SQ_E8) != B_KING) && castling_rights.get_black_can_000())
+    if ((!is_sq_piece(SQ_A8, B_ROOK) || !is_sq_piece(SQ_E8, B_KING)) && castling_rights.get_black_can_000())
         castling_rights.reset_black_can_000();
 
     // Increment every time black moves
@@ -294,6 +294,13 @@ bool Board::is_square_attacked_by(Square sq, Color side) {
     return res;
 }
 
+void make_promotion(Square f, Square d, MoveList& m) {
+    m.push_back(Move(f, d, 1));
+    m.push_back(Move(f, d, 2));
+    m.push_back(Move(f, d, 3));
+    m.push_back(Move(f, d, 4));
+}
+
 // !! ONLY CHECK FOR CHECKS IS THE CASTLING MIDDLE SQUARE !!
 MoveList Board::gen_pseudolegal_moves_sq(Square sq) {
     Piece piece = get_piece(sq);
@@ -303,81 +310,57 @@ MoveList Board::gen_pseudolegal_moves_sq(Square sq) {
 
     if (piece == W_PAWN) {
         if (~all & (sq + 8)) {
-            if (get_row(sq) == 6) {
-                res.push_back(Move(sq, Square(sq + 8), 1));
-                res.push_back(Move(sq, Square(sq + 8), 2));
-                res.push_back(Move(sq, Square(sq + 8), 3));
-                res.push_back(Move(sq, Square(sq + 8), 4));
-            } else {
-                res.push_back(Move(sq, Square(sq + 8)));
-            }
+            if (get_row(sq) == 6)
+                make_promotion(sq, sq + 8, res);
+            else
+                res.push_back(Move(sq, (sq + 8)));
             if (get_row(sq) == 1 && (~all & (sq + 16))) {
-                res.push_back(Move(sq, Square(sq + 16)));
+                res.push_back(Move(sq, (sq + 16)));
             }
         }
         if (get_col(sq) != 0 && (by_color[BLACK] & (sq + 7))) {
-            if (get_row(sq) == 6) {
-                res.push_back(Move(sq, Square(sq + 7), 1));
-                res.push_back(Move(sq, Square(sq + 7), 2));
-                res.push_back(Move(sq, Square(sq + 7), 3));
-                res.push_back(Move(sq, Square(sq + 7), 4));
-            } else {
-                res.push_back(Move(sq, Square(sq + 7)));
-            }
+            if (get_row(sq) == 6)
+                make_promotion(sq, sq + 7, res);
+            else
+                res.push_back(Move(sq, (sq + 7)));
         }
         if (get_col(sq) != 7 && (by_color[BLACK] & (sq + 9))) {
-            if (get_row(sq) == 6) {
-                res.push_back(Move(sq, Square(sq + 9), 1));
-                res.push_back(Move(sq, Square(sq + 9), 2));
-                res.push_back(Move(sq, Square(sq + 9), 3));
-                res.push_back(Move(sq, Square(sq + 9), 4));
-            } else {
-                res.push_back(Move(sq, Square(sq + 9)));
-            }
+            if (get_row(sq) == 6)
+                make_promotion(sq, sq + 9, res);
+            else
+                res.push_back(Move(sq, (sq + 9)));
         }
         if (sq + 7 == en_passant_sq && get_col(sq) != 0)
-            res.push_back(Move(sq, Square(sq + 7)));
+            res.push_back(Move(sq, (sq + 7)));
         if (sq + 9 == en_passant_sq && get_col(sq) != 7)
-            res.push_back(Move(sq, Square(sq + 9)));
+            res.push_back(Move(sq, (sq + 9)));
     }
     else if (piece == B_PAWN) {
         if (~all & (sq - 8)) {
-            if (get_row(sq) == 1) {
-                res.push_back(Move(sq, Square(sq - 8), 1));
-                res.push_back(Move(sq, Square(sq - 8), 2));
-                res.push_back(Move(sq, Square(sq - 8), 3));
-                res.push_back(Move(sq, Square(sq - 8), 4));
-            } else {
-                res.push_back(Move(sq, Square(sq - 8)));
-            }
-            if (get_row(sq) == 6 && get_piece(sq - 16) == NO_PIECE) {
-                res.push_back(Move(sq, Square(sq - 16)));
+            if (get_row(sq) == 1)
+                make_promotion(sq, sq - 8, res);
+            else
+                res.push_back(Move(sq, (sq - 8)));
+            if (get_row(sq) == 6 && (~all & (sq - 16))) {
+                res.push_back(Move(sq, (sq - 16)));
             }
         }
         if (get_col(sq) != 7 && (by_color[WHITE] & (sq - 7))) {
-            if (get_row(sq) == 1) {
-                res.push_back(Move(sq, Square(sq - 7), 1));
-                res.push_back(Move(sq, Square(sq - 7), 2));
-                res.push_back(Move(sq, Square(sq - 7), 3));
-                res.push_back(Move(sq, Square(sq - 7), 4));
-            } else {
-                res.push_back(Move(sq, Square(sq - 7)));
-            }
+            if (get_row(sq) == 1)
+                make_promotion(sq, sq - 7, res);
+            else
+                res.push_back(Move(sq, (sq - 7)));
         }
         if (get_col(sq) != 0 && (by_color[WHITE] & (sq - 9))) {
-            if (get_row(sq) == 1) {
-                res.push_back(Move(sq, Square(sq - 9), 1));
-                res.push_back(Move(sq, Square(sq - 9), 2));
-                res.push_back(Move(sq, Square(sq - 9), 3));
-                res.push_back(Move(sq, Square(sq - 9), 4));
-            } else {
-                res.push_back(Move(sq, Square(sq - 9)));
-            }
+            if (get_row(sq) == 1)
+                make_promotion(sq, sq - 9, res);
+            else
+                res.push_back(Move(sq, sq - 9));
         }
         if (sq - 7 == en_passant_sq && get_col(sq) != 7)
-            res.push_back(Move(sq, Square(sq - 7)));
+            res.push_back(Move(sq, sq - 7));
         if (sq - 9 == en_passant_sq && get_col(sq) != 0)
-            res.push_back(Move(sq, Square(sq - 9)));
+            res.push_back(Move(sq, sq - 9));
     }
     else if (piece == W_KNIGHT) {
         attacks_bb = knight_attacks[sq];
