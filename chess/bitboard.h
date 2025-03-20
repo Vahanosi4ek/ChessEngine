@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <cassert>
 
 enum Square : int {
     SQ_A1, SQ_B1, SQ_C1, SQ_D1, SQ_E1, SQ_F1, SQ_G1, SQ_H1,
@@ -17,6 +18,58 @@ enum Square : int {
 constexpr bool is_ok(Square sq) { return (SQ_A1 <= sq) && (sq <= SQ_H8); }
 
 using Bitboard = uint64_t;
+
+inline int lsb(Bitboard b) { return __builtin_ctzll(b); }
+inline Square pop_lsb(Bitboard& b) {
+    assert(b);
+    const Square s = Square(lsb(b));
+    b &= b - 1;
+    return s;
+}
+
+enum Direction : int {
+    NORTH = 8,
+    EAST  = 1,
+    SOUTH = -NORTH,
+    WEST  = -EAST,
+
+    NORTH_EAST = NORTH + EAST,
+    SOUTH_EAST = SOUTH + EAST,
+    SOUTH_WEST = SOUTH + WEST,
+    NORTH_WEST = NORTH + WEST
+};
+
+constexpr Bitboard FileA = 0x0101010101010101ULL;
+constexpr Bitboard FileB = FileA << 1;
+constexpr Bitboard FileC = FileA << 2;
+constexpr Bitboard FileD = FileA << 3;
+constexpr Bitboard FileE = FileA << 4;
+constexpr Bitboard FileF = FileA << 5;
+constexpr Bitboard FileG = FileA << 6;
+constexpr Bitboard FileH = FileA << 7;
+
+constexpr Bitboard Rank1 = 0xFF;
+constexpr Bitboard Rank2 = Rank1 << (8 * 1);
+constexpr Bitboard Rank3 = Rank1 << (8 * 2);
+constexpr Bitboard Rank4 = Rank1 << (8 * 3);
+constexpr Bitboard Rank5 = Rank1 << (8 * 4);
+constexpr Bitboard Rank6 = Rank1 << (8 * 5);
+constexpr Bitboard Rank7 = Rank1 << (8 * 6);
+constexpr Bitboard Rank8 = Rank1 << (8 * 7);
+
+constexpr Bitboard shift(Bitboard b, Direction D) {
+    return D == NORTH         ? b << 8
+         : D == SOUTH         ? b >> 8
+         : D == NORTH + NORTH ? b << 16
+         : D == SOUTH + SOUTH ? b >> 16
+         : D == EAST          ? (b & ~FileH) << 1
+         : D == WEST          ? (b & ~FileA) >> 1
+         : D == NORTH_EAST    ? (b & ~FileH) << 9
+         : D == NORTH_WEST    ? (b & ~FileA) << 7
+         : D == SOUTH_EAST    ? (b & ~FileH) >> 7
+         : D == SOUTH_WEST    ? (b & ~FileA) >> 9
+                              : 0;
+}
 
 constexpr Bitboard square_to_bb(Square s) { return 1ull << int(s); }
 
@@ -38,8 +91,5 @@ inline void clear_square(Bitboard& board, Square sq) { board -= sq; }
 
 constexpr int get_row(Square sq) { return sq / 8; }
 constexpr int get_col(Square sq) { return sq % 8; }
-
-inline int lsb(Bitboard b) { return __builtin_ctzll(b); }
-inline void pop_lsb(Bitboard& b) { b &= b - 1; }
 
 void print_bb(Bitboard bb);
