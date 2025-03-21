@@ -7,9 +7,6 @@
 #include <string>
 #include <vector>
 
-extern Bitboard knight_attacks[SQ_ALL];
-extern Bitboard king_attacks[SQ_ALL];
-
 enum Color {
     WHITE,
     BLACK,
@@ -93,7 +90,6 @@ public:
 
     bool is_square_attacked_by(Square sq, Color side);
 
-    MoveList gen_pseudolegal_moves_sq(Square sq);
     MoveList gen_pseudolegal_moves();
     MoveList gen_legal_moves();
 

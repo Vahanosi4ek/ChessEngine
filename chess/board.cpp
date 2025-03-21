@@ -1,4 +1,5 @@
 #include "board.h"
+#include "magic.h"
 
 #include <sstream>
 #include <iostream>
@@ -90,6 +91,8 @@ void init() {
         knight_attacks[i] = get_knight_attacks(Square(i));
         king_attacks[i] = get_king_attacks(Square(i));
     }
+
+    init_magics();
 }
 
 Board::Board() {
@@ -392,7 +395,7 @@ MoveList Board::gen_pseudolegal_moves() {
 
     while (our_bishops) {
         from = pop_lsb(our_bishops);
-        moves_from_attack_bb(from, get_bishop_attacks(from, all) & ~allies, res);
+        moves_from_attack_bb(from, fast_bishop_attacks(from, all) & ~allies, res);
     }
 
     // Rooks
@@ -400,7 +403,7 @@ MoveList Board::gen_pseudolegal_moves() {
 
     while (our_rooks) {
         from = pop_lsb(our_rooks);
-        moves_from_attack_bb(from, get_rook_attacks(from, all) & ~allies, res);
+        moves_from_attack_bb(from, fast_rook_attacks(from, all) & ~allies, res);
     }
 
     // Queens
@@ -408,7 +411,7 @@ MoveList Board::gen_pseudolegal_moves() {
 
     while (our_queens) {
         from = pop_lsb(our_queens);
-        moves_from_attack_bb(from, (get_rook_attacks(from, all) | get_bishop_attacks(from, all)) & ~allies, res);
+        moves_from_attack_bb(from, (fast_rook_attacks(from, all) | fast_bishop_attacks(from, all)) & ~allies, res);
     }
 
     // King
