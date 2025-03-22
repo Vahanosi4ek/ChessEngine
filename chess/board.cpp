@@ -92,7 +92,7 @@ void init() {
         king_attacks[i] = get_king_attacks(Square(i));
     }
 
-    init_magics();
+    init_magics(true);
 }
 
 Board::Board() {
@@ -288,10 +288,10 @@ bool Board::is_square_attacked_by(Square sq, Color side) {
     else if (king_attacks[sq] & by_color[side] & by_type[KING])
         res = true;
 
-    else if (get_bishop_attacks(sq, by_color[WHITE] | by_color[BLACK]) & by_color[side] & (by_type[BISHOP] | by_type[QUEEN]))
+    else if (fast_bishop_attacks(sq, by_color[WHITE] | by_color[BLACK]) & by_color[side] & (by_type[BISHOP] | by_type[QUEEN]))
         res = true;
 
-    else if (get_rook_attacks(sq, by_color[WHITE] | by_color[BLACK]) & by_color[side] & (by_type[ROOK] | by_type[QUEEN]))
+    else if (fast_rook_attacks(sq, by_color[WHITE] | by_color[BLACK]) & by_color[side] & (by_type[ROOK] | by_type[QUEEN]))
         res = true;
 
     return res;

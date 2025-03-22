@@ -93,7 +93,7 @@ public:
     MoveList gen_pseudolegal_moves();
     MoveList gen_legal_moves();
 
-private:
+// private:
     // Useful for undoing moves
     std::vector<Board> history;
 
@@ -112,3 +112,6 @@ private:
 std::ostream& operator<<(std::ostream& os, Board board);
 
 std::ostream& operator<<(std::ostream& os, Move move);
+
+Bitboard get_bishop_attacks(Square sq, Bitboard blockers);
+Bitboard get_rook_attacks(Square sq, Bitboard blockers);

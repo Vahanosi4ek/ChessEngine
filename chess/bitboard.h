@@ -26,6 +26,7 @@ inline Square pop_lsb(Bitboard& b) {
     b &= b - 1;
     return s;
 }
+inline int count(Bitboard b) { return __builtin_popcountll(b); }
 
 enum Direction : int {
     NORTH = 8,

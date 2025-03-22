@@ -37,6 +37,7 @@ void test_time_movegen() {
     Board board;
 
     auto start = std::chrono::high_resolution_clock::now();
+    std::cout << "Started timing..." << std::endl;
     
     board.load_from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
     TEST(1, perft(board, 4) == 197281, "Starting position");

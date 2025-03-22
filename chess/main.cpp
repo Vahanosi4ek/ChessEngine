@@ -7,6 +7,8 @@
 
 int main() {
     test_time_movegen();
+    
+    print_magics();
 
     return 0;
 }

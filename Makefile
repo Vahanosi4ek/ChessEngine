@@ -6,7 +6,7 @@ run: build
 	./main
 
 build:
-	g++ -std=c++20 $(CPP) -o main
+	g++ -Wall -Wextra -std=c++20 $(CPP) -o main
 
 clean:
 	rm -f main
