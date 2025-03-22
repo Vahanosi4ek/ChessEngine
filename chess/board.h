@@ -69,9 +69,9 @@ public:
     void set_piece(int row, int col, Piece p) { set_piece(Square(row * 8 + col), p); }
     void set_piece(Square sq, Piece p);
     void rem_piece(int row, int col) { rem_piece(Square(row * 8 + col)); }
-    void rem_piece(Square sq) { if (get_piece(sq) != NO_PIECE) { clear_square(by_color[get_color(get_piece(sq))], sq); clear_square(by_type[get_type(get_piece(sq))], sq); } }
+    void rem_piece(Square sq);
     Piece get_piece(int row, int col) const { return get_piece(Square(row * 8 + col)); }
-    Piece get_piece(Square sq) const;
+    Piece get_piece(Square sq) const { return board[sq]; };
     static constexpr Piece make_piece(Color c, PieceType p) { return Piece(c * 6 + p); }
     static constexpr PieceType get_type(Piece p) { return PieceType(p % 6); }
     static constexpr Color get_color(Piece p) { return is_white(p) ? WHITE : BLACK; }
@@ -100,6 +100,9 @@ public:
     // Bitboards
     Bitboard by_color[COLOR_ALL];
     Bitboard by_type[PIECE_TYPE_ALL];
+
+    // Board
+    Piece board[SQ_ALL];
 
     // Loaded in from fen string
     Color side_to_move;

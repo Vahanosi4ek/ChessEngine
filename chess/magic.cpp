@@ -234,7 +234,7 @@ Bitboard find_magic(Square sq, int bits, bool bishop) {
         if (is_magic_valid(sq, magic, bits, bishop)) return magic;
     }
 
-    std::cout << "Magic not found" << std::endl;
+    std::cerr << "Magic not found" << std::endl;
     return 0ull;
 }
 
@@ -243,7 +243,7 @@ void init_magics(bool gen_magics) {
     std::cout << "Initializing bishop magics..." << std::endl;
     for (int sq = 0; sq < 64; sq++) {
         mask = bmask(Square(sq));
-        std::cout << "Bishop square " << sq << std::endl;
+        std::cout << "Bishop square " << sq << " for 9 bits" << std::endl;
         // TODO: Impl improving shifts
         m_bishop_table[sq].mask = mask;
         if (gen_magics)
@@ -255,7 +255,7 @@ void init_magics(bool gen_magics) {
     std::cout << "Initializing rook magics..." << std::endl;
     for (int sq = 0; sq < 64; sq++) {
         mask = rmask(Square(sq));
-        std::cout << "Rook square " << sq << std::endl;
+        std::cout << "Rook square " << sq << " for 12 bits" << std::endl;
         // TODO: Impl improving shifts
         m_rook_table[sq].mask = mask;
         if (gen_magics)

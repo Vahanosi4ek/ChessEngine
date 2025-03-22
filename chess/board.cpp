@@ -92,7 +92,7 @@ void init() {
         king_attacks[i] = get_king_attacks(Square(i));
     }
 
-    init_magics(true);
+    init_magics(false);
 }
 
 Board::Board() {
@@ -100,8 +100,18 @@ Board::Board() {
         by_type[i] = 0ull;
     for (int i = 0; i < COLOR_ALL; i++)
         by_color[i] = 0ull;
+    for (int i = 0; i < SQ_ALL; i++)
+        board[i] = NO_PIECE;
 
     init();
+}
+
+void Board::rem_piece(Square sq) {
+    if (get_piece(sq) != NO_PIECE) {
+        clear_square(by_color[get_color(get_piece(sq))], sq);
+        clear_square(by_type[get_type(get_piece(sq))], sq);
+    }
+    board[sq] = NO_PIECE;
 }
 
 void Board::set_piece(Square sq, Piece p) {
@@ -109,18 +119,8 @@ void Board::set_piece(Square sq, Piece p) {
     if (p != NO_PIECE) {
         set_square(by_color[get_color(p)], sq);
         set_square(by_type[get_type(p)], sq);
-    }
-}
-
-Piece Board::get_piece(Square sq) const {
-    if (get_square(by_type[PAWN], sq)) return make_piece(get_color(sq), PAWN);
-    if (get_square(by_type[KNIGHT], sq)) return make_piece(get_color(sq), KNIGHT);
-    if (get_square(by_type[BISHOP], sq)) return make_piece(get_color(sq), BISHOP);
-    if (get_square(by_type[ROOK], sq)) return make_piece(get_color(sq), ROOK);
-    if (get_square(by_type[QUEEN], sq)) return make_piece(get_color(sq), QUEEN);
-    if (get_square(by_type[KING], sq)) return make_piece(get_color(sq), KING);
-
-    return NO_PIECE;
+    }    
+    board[sq] = p;
 }
 
 Board& Board::load_from_fen(const std::string& fen) {
@@ -392,6 +392,7 @@ MoveList Board::gen_pseudolegal_moves() {
 
     // Bishops
     Bitboard our_bishops = by_type[BISHOP] & by_color[us];
+
 
     while (our_bishops) {
         from = pop_lsb(our_bishops);
