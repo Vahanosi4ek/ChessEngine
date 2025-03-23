@@ -93,6 +93,7 @@ void init() {
     }
 
     init_magics(false);
+    // print_magics();
 }
 
 Board::Board() {

@@ -6,15 +6,11 @@
 #define BISHOP_ATTACKS (64 * 512)
 
 struct SMagic {
+    Bitboard* ptr;
     Bitboard  mask;
     Bitboard  magic;
     int       shift;
 };
-
-Bitboard bmask(Square sq);
-Bitboard rmask(Square sq);
-
-Bitboard index_to_occ(int index, Bitboard mask);
 
 extern const Bitboard bishop_magics[64];
 extern const Bitboard rook_magics  [64];

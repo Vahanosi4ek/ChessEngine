@@ -3,144 +3,165 @@
 
 #include <random>
 
-Bitboard rook_attacks[64][4096];
-Bitboard bishop_attacks[64][512];
+Bitboard attack_table[ROOK_ATTACKS + BISHOP_ATTACKS];
 
 SMagic m_bishop_table[64];
 SMagic m_rook_table  [64];
 
+const int RBits[64] = {
+    12, 11, 11, 11, 11, 11, 11, 12,
+    11, 10, 10, 10, 10, 10, 10, 11,
+    11, 10, 10, 10, 10, 10, 10, 11,
+    11, 10, 10, 10, 10, 10, 10, 11,
+    11, 10, 10, 10, 10, 10, 10, 11,
+    11, 10, 10, 10, 10, 10, 10, 11,
+    11, 10, 10, 10, 10, 10, 10, 11,
+    12, 11, 11, 11, 11, 11, 11, 12,
+};
+
+const int BBits[64] = {
+    6, 5, 5, 5, 5, 5, 5, 6,
+    5, 5, 5, 5, 5, 5, 5, 5,
+    5, 5, 7, 7, 7, 7, 5, 5,
+    5, 5, 7, 9, 9, 7, 5, 5,
+    5, 5, 7, 9, 9, 7, 5, 5,
+    5, 5, 7, 7, 7, 7, 5, 5,
+    5, 5, 5, 5, 5, 5, 5, 5,
+    6, 5, 5, 5, 5, 5, 5, 6,
+};
+
 const Bitboard bishop_magics[64] = {
-    2450526799455600804ull,
-    100490965273411712ull,
-    6055239232716013880ull,
-    144291127384604684ull,
-    4755890013980525568ull,
-    23244294313771264ull,
-    288237008659219456ull,
-    4901086412658835524ull,
-    1152921989955191553ull,
-    6341085868731670630ull,
-    580966605949796624ull,
-    1155349366169407617ull,
-    396892981631647744ull,
-    12386016757571584ull,
-    18015018060767362ull,
-    9296067625250471968ull,
-    74872412559114248ull,
-    1738970617193038593ull,
-    2630249663374312576ull,
-    72127980029364224ull,
-    6917599413584036864ull,
-    3459908351692132368ull,
-    577202098153210112ull,
-    2307039283250209313ull,
-    145292765063819392ull,
-    9223389631322554496ull,
-    25060352496929028ull,
-    1126037412946048ull,
-    4614500836947611648ull,
-    9029743606236288ull,
-    3096259104638016ull,
-    5225583806103163394ull,
-    4612249243259764768ull,
-    2256217724584192ull,
-    9511745590049964112ull,
-    9570427307557120ull,
-    1226109413778567424ull,
-    72661239075045408ull,
-    562984447582736ull,
-    4071272209648453232ull,
-    4611905955146236032ull,
-    9223658056347814912ull,
-    577059711414698504ull,
-    432680923872379920ull,
-    17592731832840ull,
-    5801779885697925648ull,
-    4612548672273795106ull,
-    140809529721890ull,
-    5992215264737362952ull,
-    16431403134766600256ull,
-    2336749789186ull,
-    306403174398428160ull,
-    1162509520904130568ull,
-    40966776164352ull,
-    1533794533658642576ull,
-    2380434037494923328ull,
-    13871091392350527488ull,
-    653022220981403680ull,
-    5188322736891502848ull,
-    578712732508357648ull,
-    36037593162777600ull,
-    4512403245498384ull,
-    567382628171856ull,
-    1243013907108528192ull,
+    297457482031202818ull,
+    1298216546004762888ull,
+    2308130547484000256ull,
+    633872749428938ull,
+    326590413789995280ull,
+    7327197765369880ull,
+    573956381737092ull,
+    306315435473637376ull,
+    2413497833488512ull,
+    35203767632417ull,
+    36105797227806720ull,
+    4611695931229208722ull,
+    4611687187742720004ull,
+    9008368694068484ull,
+    2308095375980380160ull,
+    283958173506050ull,
+    2323998216116372484ull,
+    9296713869336772864ull,
+    144695799245308169ull,
+    164391299204550660ull,
+    19283252185399328ull,
+    18155690318102784ull,
+    324443895428030464ull,
+    1749683779359805456ull,
+    76631571100619264ull,
+    286972804350465ull,
+    4614016984957354000ull,
+    9529621209969393952ull,
+    18296972998885376ull,
+    4616189895082512384ull,
+    321334454652992ull,
+    22806070185985089ull,
+    599594893334560ull,
+    6917691824628875808ull,
+    68125744752099841ull,
+    9227877837671235712ull,
+    666533983412420736ull,
+    441353324045338624ull,
+    2329319679723776ull,
+    4720899039560737024ull,
+    4611835707701415938ull,
+    72576904794241ull,
+    288690385134290948ull,
+    589621834547332ull,
+    11831099200631783937ull,
+    450365700897767808ull,
+    5333389002316711425ull,
+    4505012688392225ull,
+    297872063160385792ull,
+    586631376865329152ull,
+    9799835031319085824ull,
+    47287814358864008ull,
+    289356312045748744ull,
+    18033227679932928ull,
+    149762306774597792ull,
+    2454479941023056913ull,
+    2310487623087425539ull,
+    8791045168629328945ull,
+    6755747342320640ull,
+    9227875707366426629ull,
+    4612248977272865290ull,
+    292737558050898465ull,
+    289427228935127556ull,
+    7160727891600228370ull,
 };
 
 const Bitboard rook_magics[64] = {
-    756607761056301088ull,
-    72066665017254000ull,
-    9331463376250900480ull,
-    72620685993707520ull,
-    72060012138334208ull,
-    2449977988641763592ull,
-    2310370265822920768ull,
-    612489824812663040ull,
-    1891934056233304096ull,
-    12781906610176ull,
-    35187728711685ull,
-    562984480942144ull,
-    12948261379805196ull,
-    290482485337399812ull,
-    9224009797152800898ull,
-    7107252892762144ull,
-    1153839047061307428ull,
-    9295993714721423616ull,
-    18718120848916736ull,
-    7782255623936344128ull,
-    4648277800055472384ull,
-    5197299690172874816ull,
-    657543180731826184ull,
-    2342296217723342913ull,
-    10378863379375751168ull,
-    36559130738832ull,
-    577604795226390593ull,
-    1298165066759210048ull,
-    587724151565977600ull,
-    937316071164347526ull,
-    108091614282383616ull,
-    9223376470871916672ull,
-    9236885103620128801ull,
-    8815555642372ull,
-    18086970849230856ull,
-    1441503793786258816ull,
-    2324138908553577488ull,
-    4325777862441304243ull,
-    9511622206644298885ull,
-    283676151644832ull,
-    1706485553831936ull,
-    45617088303747080ull,
-    1740087102185410560ull,
-    1297107766338519050ull,
-    3377979564492936ull,
-    549823972544ull,
-    9313470692563627136ull,
-    4611687129083412484ull,
-    72128168951353352ull,
-    614882363919065120ull,
-    29273440529679392ull,
-    12695658346892493312ull,
-    144326448927342656ull,
-    2255098417906952ull,
-    45117360150938752ull,
-    2199560161296ull,
-    311163938153025ull,
-    14989149715139938561ull,
-    60808224287244930ull,
-    297272873863612421ull,
-    72215945191882753ull,
-    288235427205480465ull,
-    76566159189738497ull,
-    9223390745774310434ull,
+    9259401388333481986ull,
+    4629718010196664322ull,
+    36046389622342528ull,
+    72062060839569664ull,
+    144117387234378784ull,
+    4683748010554294528ull,
+    36029346808332544ull,
+    9295431005961847552ull,
+    603623227142455304ull,
+    77124420661018660ull,
+    1171498990781366784ull,
+    18295942206390304ull,
+    9147971111224320ull,
+    1267187788547072ull,
+    585608693349876224ull,
+    955607588892854528ull,
+    4647857202206343272ull,
+    9149587084288005ull,
+    45037096192245792ull,
+    9227875911494533185ull,
+    11259548966847488ull,
+    578995126639526912ull,
+    1170975486746104368ull,
+    38282795869701157ull,
+    1477180970909048848ull,
+    2314920595468324864ull,
+    2305878195734315136ull,
+    1441195871964233856ull,
+    4622945176411181312ull,
+    9241390835566641664ull,
+    576462968507629832ull,
+    13582344447606924ull,
+    36169809527832608ull,
+    4616189755497906240ull,
+    2305860603555618816ull,
+    9439686690403782656ull,
+    9228157188852156416ull,
+    581105115214119936ull,
+    4828149286694814032ull,
+    2323899487900144641ull,
+    18049857767899136ull,
+    9223654062661107744ull,
+    9516248984046403600ull,
+    1153765998257045536ull,
+    577591050391027840ull,
+    5066584209096708ull,
+    1152939105383088648ull,
+    4827859488876920833ull,
+    180144604161573632ull,
+    63067988042981952ull,
+    35188671256320ull,
+    2469116105206038656ull,
+    2251817001949568ull,
+    562984581857792ull,
+    9227893237937669120ull,
+    2305843628831998464ull,
+    4647715366276964609ull,
+    18014538100186369ull,
+    2307340820539246849ull,
+    360850989000950818ull,
+    5231493951774524418ull,
+    281767035013651ull,
+    4611687186792841348ull,
+    10696191184830530ull,
 };
 
 Bitboard random_bb() {
@@ -201,68 +222,64 @@ Bitboard index_to_occ(int index, Bitboard mask) {
     return res;
 }
 
-Bitboard is_magic_valid(Square sq, Bitboard magic, int bits, bool bishop) {
-    Bitboard mask = bishop ? bmask(sq) : rmask(sq);
+Bitboard find_magic(Square sq, int m, int bishop) {
+    Bitboard mask, b[4096], a[4096], used[4096], magic;
+    int i, j, k, n, fail;
 
-    Bitboard used[4096];
-    Bitboard attacks[4096];
-    Bitboard occupancies[4096];
+    mask = bishop ? bmask(sq) : rmask(sq);
+    n = count(mask);
 
-    int index;
-
-    for (int i = 0; i < (1 << bits); i++) {
-        occupancies[i] = index_to_occ(i, mask);
-        attacks[i] = bishop ? get_bishop_attacks(sq, occupancies[i]) : get_rook_attacks(sq, occupancies[i]);
+    for(i = 0; i < (1 << n); i++) {
+        b[i] = index_to_occ(i, mask);
+        a[i] = bishop ? get_bishop_attacks(sq, b[i]) : get_rook_attacks(sq, b[i]);
     }
-
-    for (int i = 0; i < (1 << bits); i++)
-        used[i] = 0ull;
-
-    for (int i = 0; i < (1 << bits); i++) {
-        index = transform(occupancies[i], magic, bits);
-        if (used[index] == 0ull) used[index] = attacks[i];
-        else if (used[index] != attacks[i]) return false;
+    for(k = 0; k < 100000000; k++) {
+    magic = random_magic_bb();
+    if(count((mask * magic) & 0xFF00000000000000ULL) < 6) continue;
+    for(i = 0; i < 4096; i++) used[i] = 0ULL;
+    for(i = 0, fail = 0; !fail && i < (1 << n); i++) {
+        j = transform(b[i], magic, m);
+        if(used[j] == 0ULL) used[j] = a[i];
+        else if(used[j] != a[i]) fail = 1;
+        }
+        if(!fail) return magic;
     }
-
-    return true;
-}
-
-Bitboard find_magic(Square sq, int bits, bool bishop) {
-    Bitboard magic;
-    for (int i = 0; i < 10000000; i++) {
-        magic = random_magic_bb();
-        if (is_magic_valid(sq, magic, bits, bishop)) return magic;
-    }
-
-    std::cerr << "Magic not found" << std::endl;
-    return 0ull;
+    printf("***Failed***\n");
+    return 0ULL;
 }
 
 void init_magics(bool gen_magics) {
     Bitboard mask;
+    Bitboard* ptr = (Bitboard*)&attack_table;
     std::cout << "Initializing bishop magics..." << std::endl;
     for (int sq = 0; sq < 64; sq++) {
         mask = bmask(Square(sq));
-        // std::cout << "Bishop square " << sq << " for 9 bits" << std::endl;
-        // TODO: Impl improving shifts
+        std::cout << "Bishop sq " << sq << " for " << BBits[sq] << " bits" << std::endl;
+        
+        m_bishop_table[sq].ptr = ptr;
         m_bishop_table[sq].mask = mask;
+        m_bishop_table[sq].shift = 64 - BBits[sq];
         if (gen_magics)
-            m_bishop_table[sq].magic = find_magic(Square(sq), 9, 1);
+            m_bishop_table[sq].magic = find_magic(Square(sq), BBits[sq], 1);
         else
             m_bishop_table[sq].magic = bishop_magics[sq];
-        m_bishop_table[sq].shift = 64 - 9;
+
+        ptr += 1 << BBits[sq];
     }
     std::cout << "Initializing rook magics..." << std::endl;
     for (int sq = 0; sq < 64; sq++) {
         mask = rmask(Square(sq));
-        // std::cout << "Rook square " << sq << " for 12 bits" << std::endl;
-        // TODO: Impl improving shifts
+        std::cout << "Rook sq " << sq << " for " << RBits[sq] << " bits" << std::endl;
+        
+        m_rook_table[sq].ptr = ptr;
         m_rook_table[sq].mask = mask;
+        m_rook_table[sq].shift = 64 - RBits[sq];
         if (gen_magics)
-            m_rook_table[sq].magic = find_magic(Square(sq), 12, 0);
+            m_rook_table[sq].magic = find_magic(Square(sq), RBits[sq], 0);
         else
             m_rook_table[sq].magic = rook_magics[sq];
-        m_rook_table[sq].shift = 64 - 12;
+
+        ptr += 1 << RBits[sq];
     }
 
     std::cout << "Magics found..." << std::endl;
@@ -272,18 +289,18 @@ void init_magics(bool gen_magics) {
     Bitboard occ;
 
     for (int sq = 0; sq < 64; sq++) {
-        for (int occ_index = 0; occ_index < (1 << 9); occ_index++) {
+        for (int occ_index = 0; occ_index < (1 << BBits[sq]); occ_index++) {
             occ = index_to_occ(occ_index, m_bishop_table[sq].mask);
-            index = transform(occ, m_bishop_table[sq].magic, 9);
-            bishop_attacks[sq][index] = get_bishop_attacks(Square(sq), occ);
+            index = transform(occ, m_bishop_table[sq].magic, BBits[sq]);
+            m_bishop_table[sq].ptr[index] = get_bishop_attacks(Square(sq), occ);
         }
     }
 
     for (int sq = 0; sq < 64; sq++) {
-        for (int occ_index = 0; occ_index < (1 << 12); occ_index++) {
+        for (int occ_index = 0; occ_index < (1 << RBits[sq]); occ_index++) {
             occ = index_to_occ(occ_index, m_rook_table[sq].mask);
-            index = transform(occ, m_rook_table[sq].magic, 12);
-            rook_attacks[sq][index] = get_rook_attacks(Square(sq), occ);
+            index = transform(occ, m_rook_table[sq].magic, RBits[sq]);
+            m_rook_table[sq].ptr[index] = get_rook_attacks(Square(sq), occ);
         }
     }
 
@@ -291,17 +308,19 @@ void init_magics(bool gen_magics) {
 }
 
 Bitboard fast_bishop_attacks(Square sq, Bitboard occ) {
-    occ &= m_bishop_table[sq].mask;
-    occ *= m_bishop_table[sq].magic;
-    occ >>= m_bishop_table[sq].shift;
-    return bishop_attacks[sq][occ];
+    Bitboard* aptr  = m_bishop_table[sq].ptr;
+    occ            &= m_bishop_table[sq].mask;
+    occ            *= m_bishop_table[sq].magic;
+    occ           >>= m_bishop_table[sq].shift;
+    return aptr[occ];
 }
 
 Bitboard fast_rook_attacks(Square sq, Bitboard occ) {
-    occ &= m_rook_table[sq].mask;
-    occ *= m_rook_table[sq].magic;
-    occ >>= m_rook_table[sq].shift;
-    return rook_attacks[sq][occ];
+    Bitboard* aptr  = m_rook_table[sq].ptr;
+    occ            &= m_rook_table[sq].mask;
+    occ            *= m_rook_table[sq].magic;
+    occ           >>= m_rook_table[sq].shift;
+    return aptr[occ];
 }
 
 void print_magics() {
