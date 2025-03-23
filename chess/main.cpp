@@ -8,7 +8,8 @@
 int main() {
     init();
 
-    test_time_movegen();
+    Board board;
+    repeated_tests(board, 1000);
 
     return 0;
 }

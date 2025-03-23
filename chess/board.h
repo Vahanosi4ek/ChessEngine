@@ -33,27 +33,27 @@ using MoveList = std::vector<Move>;
 
 class CastlingRights {
 public:
-    CastlingRights() : data(0) {}
-    CastlingRights(int d) : data(d) {}
+    constexpr CastlingRights() : data(0) {}
+    constexpr CastlingRights(int d) : data(d) {}
     CastlingRights& operator=(const CastlingRights&) = default;
 
-    int get_data() const { return data; }
-    void clear_all() { data = 0; }
+    constexpr int get_data() const { return data; }
+    constexpr void clear_all() { data = 0; }
 
-    void set_white_can_00() { data |= 1; }
-    void set_white_can_000() { data |= 2; }
-    void set_black_can_00() { data |= 4; }
-    void set_black_can_000() { data |= 8; }
+    constexpr void set_white_can_00() { data |= 1; }
+    constexpr void set_white_can_000() { data |= 2; }
+    constexpr void set_black_can_00() { data |= 4; }
+    constexpr void set_black_can_000() { data |= 8; }
 
-    void reset_white_can_00() { data &= ~1; }
-    void reset_white_can_000() { data &= ~2; }
-    void reset_black_can_00() { data &= ~4; }
-    void reset_black_can_000() { data &= ~8; }
+    constexpr void reset_white_can_00() { data &= ~1; }
+    constexpr void reset_white_can_000() { data &= ~2; }
+    constexpr void reset_black_can_00() { data &= ~4; }
+    constexpr void reset_black_can_000() { data &= ~8; }
 
-    bool get_white_can_00() { return data & 1; }
-    bool get_white_can_000() { return data & 2; }
-    bool get_black_can_00() { return data & 4; }
-    bool get_black_can_000() { return data & 8; }
+    constexpr bool get_white_can_00() { return data & 1; }
+    constexpr bool get_white_can_000() { return data & 2; }
+    constexpr bool get_black_can_00() { return data & 4; }
+    constexpr bool get_black_can_000() { return data & 8; }
 
 private:
     int data;
