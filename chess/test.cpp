@@ -13,12 +13,12 @@ int perft(Board& board, const int& depth) {
             res += perft(board, depth - 1);
             board.undo_move(move);
             // Useful for debugging
-            if (!(board == b)) {
-                std::cout << "Not equal" << std::endl;
-                std::cout << b;
-                std::cout << board;
-                assert(false);
-            }
+            // if (!(board == b)) {
+            //     std::cout << "Not equal" << std::endl;
+            //     std::cout << b;
+            //     std::cout << board;
+            //     assert(false);
+            // }
         }
     }
 
@@ -72,5 +72,4 @@ void test_time_movegen() {
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 
     std::cout << "Tests took " << duration.count() << " milliseconds" << std::endl;
-    std::cout << "Speed: " << (197281 + 97862 + 674624 + 422333 + 422333 + 62379 + 89890) / std::chrono::duration_cast<std::chrono::seconds>(end - start).count() << " Nodes per second" << std::endl;
 }

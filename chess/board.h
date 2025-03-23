@@ -104,7 +104,7 @@ public:
     MoveList gen_pseudolegal_moves();
     MoveList gen_legal_moves();
 
-// private:
+private:
     // Useful for undoing moves
     std::vector<UndoInfo> undo_info;
 
