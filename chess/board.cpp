@@ -379,10 +379,10 @@ bool Board::is_square_attacked_by(Square sq, Color side) {
     else if (king_attacks[sq] & by_color[side] & by_type[KING])
         res = true;
 
-    else if (get_bishop_attacks(sq, by_color[WHITE] | by_color[BLACK]) & by_color[side] & (by_type[BISHOP] | by_type[QUEEN]))
+    else if (fast_bishop_attacks(sq, by_color[WHITE] | by_color[BLACK]) & by_color[side] & (by_type[BISHOP] | by_type[QUEEN]))
         res = true;
 
-    else if (get_rook_attacks(sq, by_color[WHITE] | by_color[BLACK]) & by_color[side] & (by_type[ROOK] | by_type[QUEEN]))
+    else if (fast_rook_attacks(sq, by_color[WHITE] | by_color[BLACK]) & by_color[side] & (by_type[ROOK] | by_type[QUEEN]))
         res = true;
 
     return res;
@@ -487,7 +487,7 @@ MoveList Board::gen_pseudolegal_moves() {
 
     while (our_bishops) {
         from = pop_lsb(our_bishops);
-        moves_from_attack_bb(from, get_bishop_attacks(from, all) & ~allies, res);
+        moves_from_attack_bb(from, fast_bishop_attacks(from, all) & ~allies, res);
     }
 
     // Rooks
@@ -495,7 +495,7 @@ MoveList Board::gen_pseudolegal_moves() {
 
     while (our_rooks) {
         from = pop_lsb(our_rooks);
-        moves_from_attack_bb(from, get_rook_attacks(from, all) & ~allies, res);
+        moves_from_attack_bb(from, fast_rook_attacks(from, all) & ~allies, res);
     }
 
     // Queens
@@ -503,7 +503,7 @@ MoveList Board::gen_pseudolegal_moves() {
 
     while (our_queens) {
         from = pop_lsb(our_queens);
-        moves_from_attack_bb(from, (get_rook_attacks(from, all) | get_bishop_attacks(from, all)) & ~allies, res);
+        moves_from_attack_bb(from, (fast_rook_attacks(from, all) | fast_bishop_attacks(from, all)) & ~allies, res);
     }
 
     // King
