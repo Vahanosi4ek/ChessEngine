@@ -35,6 +35,7 @@ class CastlingRights {
 public:
     CastlingRights() : data(0) {}
     CastlingRights(int d) : data(d) {}
+    CastlingRights& operator=(const CastlingRights&) = default;
 
     int get_data() const { return data; }
     void clear_all() { data = 0; }
@@ -58,11 +59,21 @@ private:
     int data;
 };
 
+struct UndoInfo {
+    Piece captured_piece = NO_PIECE; // !!! NOPIECE FOR ENPASSANT !!!
+    bool en_passant = false;
+    Square en_passant_sq = NO_SQ;
+    int rule50_half_moves = 0;
+    CastlingRights castling_rights;
+    bool promotion = false;
+};
+
 class Board {
 public:
     Board();
-    Board(const Board&) = default;
+    Board(const Board& other) = default;
     Board& operator=(const Board&) = default;
+    bool operator==(const Board&) const;
 
     Board& load_from_fen(const std::string& fen);
 
@@ -84,7 +95,7 @@ public:
     bool is_white(int row, int col) const { return is_white(Square(row * 8 + col)); }
     bool is_black(int row, int col) const { return is_black(Square(row * 8 + col)); }
     Board& make_move(Move move);
-    void undo_move();
+    void undo_move(Move move);
 
     bool is_sq_piece(Square sq, Piece piece) const { return by_color[get_color(piece)] & by_type[get_type(piece)] & sq; }
 
@@ -95,7 +106,7 @@ public:
 
 // private:
     // Useful for undoing moves
-    std::vector<Board> history;
+    std::vector<UndoInfo> undo_info;
 
     // Bitboards
     Bitboard by_color[COLOR_ALL];
@@ -118,3 +129,5 @@ std::ostream& operator<<(std::ostream& os, Move move);
 
 Bitboard get_bishop_attacks(Square sq, Bitboard blockers);
 Bitboard get_rook_attacks(Square sq, Bitboard blockers);
+
+void init();

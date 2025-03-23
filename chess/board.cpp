@@ -102,8 +102,39 @@ Board::Board() {
         by_color[i] = 0ull;
     for (int i = 0; i < SQ_ALL; i++)
         board[i] = NO_PIECE;
+}
 
-    init();
+bool Board::operator==(const Board& other) const {
+    bool res = true;
+    // Undo info
+    res &= undo_info == other.undo_info;
+    if (!res) std::cout << "HERE!!" << std::endl;
+
+    // Board flags
+    res &= side_to_move == other.side_to_move;
+    if (!res) std::cout << "HERE!!" << std::endl;
+    res &= en_passant_sq == other.en_passant_sq;
+    if (!res) std::cout << "HERE!!" << std::endl;
+    res &= rule50_half_moves == other.rule50_half_moves;
+    if (!res) std::cout << "HERE!!" << std::endl;
+    res &= move_counter == other.move_counter;
+    if (!res) std::cout << "HERE!!" << std::endl;
+    res &= castling_rights.get_data() == other.castling_rights.get_data();
+    if (!res) { std::cout << castling_rights.get_data() << ", " << other.castling_rights.get_data() << std::endl; }
+
+    // Board pieces
+    for (int i = 0; i < 64; i++) {
+        res &= board[i] == other.board[i];
+    }
+
+    for (int i = 0; i < PIECE_TYPE_ALL; i++) {
+        res &= by_type[i] == other.by_type[i];
+    }
+
+    res &= by_color[WHITE] == other.by_color[WHITE];
+    res &= by_color[BLACK] == other.by_color[BLACK];
+
+    return res;
 }
 
 void Board::rem_piece(Square sq) {
@@ -184,18 +215,34 @@ Board& Board::load_from_fen(const std::string& fen) {
 }
 
 Board& Board::make_move(Move move) {
-    history.push_back(*this);  // Store current board state
+    UndoInfo u;
+
+    u.captured_piece = NO_PIECE;
+    u.en_passant = false;
+    u.promotion = true;
+    u.en_passant_sq = en_passant_sq;
+    u.rule50_half_moves = rule50_half_moves;
+    u.castling_rights = castling_rights;
 
     // Check for capture or pawn move (for 50 rule)
-    if (is_sq_piece(move.from, W_PAWN) || ((by_color[WHITE] | by_color[BLACK]) & move.to)) rule50_half_moves = 0;
-    else rule50_half_moves++;
+    if (is_sq_piece(move.from, W_PAWN))
+        rule50_half_moves = 0;
+    if ((by_color[WHITE] | by_color[BLACK]) & move.to) {
+        rule50_half_moves = 0;
+        u.captured_piece = get_piece(move.to);
+    }
+    else {
+        rule50_half_moves++;
+    }
 
     Square temp_en_passant_sq;
     // Update En passant square
-    if (is_sq_piece(move.from, W_PAWN) && (8 <= move.from) && (move.from <= 15) && (24 <= move.to) && (move.to <= 31))
+    if (is_sq_piece(move.from, W_PAWN) && (8 <= move.from) && (move.from <= 15) && (24 <= move.to) && (move.to <= 31)) {
         temp_en_passant_sq = Square(move.from + 8);
-    else if (is_sq_piece(move.from, B_PAWN) && (48 <= move.from) && (move.from <= 55) && (32 <= move.to) && (move.to <= 39))
+    }
+    else if (is_sq_piece(move.from, B_PAWN) && (48 <= move.from) && (move.from <= 55) && (32 <= move.to) && (move.to <= 39)) {
         temp_en_passant_sq = Square(move.from - 8);
+    }
     else
         temp_en_passant_sq = NO_SQ;
 
@@ -216,13 +263,14 @@ Board& Board::make_move(Move move) {
         { set_piece(SQ_D8, B_ROOK); rem_piece(SQ_A8); }
 
     if (move.promotion == 0) {
+        u.promotion = false;
         // Check for en passant
         if ((move.to == en_passant_sq) && is_sq_piece(move.from, W_PAWN)) {
-            rem_piece(Square(move.to - 8));
+            u.en_passant = true;
             rem_piece(Square(move.to - 8));
         }
         else if ((move.to == en_passant_sq) && is_sq_piece(move.from, B_PAWN)) {
-            rem_piece(Square(move.to + 8));
+            u.en_passant = true;
             rem_piece(Square(move.to + 8));
         }
 
@@ -237,14 +285,18 @@ Board& Board::make_move(Move move) {
 
 
     // !! Update !! (NOT CHECK!!) castling rights
-    if ((!is_sq_piece(SQ_H1, W_ROOK) || !is_sq_piece(SQ_E1, W_KING)) && castling_rights.get_white_can_00())
+    if ((!is_sq_piece(SQ_H1, W_ROOK) || !is_sq_piece(SQ_E1, W_KING)) && castling_rights.get_white_can_00()) {
         castling_rights.reset_white_can_00();
-    if ((!is_sq_piece(SQ_A1, W_ROOK) || !is_sq_piece(SQ_E1, W_KING)) && castling_rights.get_white_can_000())
+    }
+    if ((!is_sq_piece(SQ_A1, W_ROOK) || !is_sq_piece(SQ_E1, W_KING)) && castling_rights.get_white_can_000()) {
         castling_rights.reset_white_can_000();
-    if ((!is_sq_piece(SQ_H8, B_ROOK) || !is_sq_piece(SQ_E8, B_KING)) && castling_rights.get_black_can_00())
+    }
+    if ((!is_sq_piece(SQ_H8, B_ROOK) || !is_sq_piece(SQ_E8, B_KING)) && castling_rights.get_black_can_00()) {
         castling_rights.reset_black_can_00();
-    if ((!is_sq_piece(SQ_A8, B_ROOK) || !is_sq_piece(SQ_E8, B_KING)) && castling_rights.get_black_can_000())
+    }
+    if ((!is_sq_piece(SQ_A8, B_ROOK) || !is_sq_piece(SQ_E8, B_KING)) && castling_rights.get_black_can_000()) {
         castling_rights.reset_black_can_000();
+    }
 
     // Increment every time black moves
     move_counter += side_to_move;
@@ -255,15 +307,54 @@ Board& Board::make_move(Move move) {
     // Set actual ep square
     en_passant_sq = temp_en_passant_sq;
 
+    undo_info.push_back(u);
+
     return *this;
 }
 
-void Board::undo_move() {
-    if (history.empty()) {
-        std::cerr << "Undo move error: no previous state!" << std::endl;
+void Board::undo_move(Move move) {
+    UndoInfo u = undo_info.back();
+    undo_info.pop_back();
+    side_to_move = Color(1 - side_to_move);
+    en_passant_sq = u.en_passant_sq;
+    castling_rights = u.castling_rights;
+    rule50_half_moves = u.rule50_half_moves;
+
+    if (side_to_move == BLACK) { move_counter--; }
+
+    if (!u.promotion) {
+        set_piece(move.from, get_piece(move.to));
+        set_piece(move.to, u.captured_piece);
+
+        if (u.en_passant) {
+            if (side_to_move == WHITE)
+                set_piece(move.to - 8, B_PAWN);
+            else
+                set_piece(move.to + 8, W_PAWN);
+        }
+    } else { 
+        if (side_to_move == WHITE) {
+            set_piece(move.from, W_PAWN);
+            set_piece(move.to, u.captured_piece);
+        } else {
+            set_piece(move.from, B_PAWN);
+            set_piece(move.to, u.captured_piece);
+        }
     }
 
-    *this = history.back();  // Restore previous state
+    if (get_piece(move.from) == W_KING && move.from == SQ_E1 && move.to == SQ_G1) {
+        set_piece(SQ_H1, W_ROOK);
+        rem_piece(SQ_F1);
+    } else if (get_piece(move.from) == W_KING && move.from == SQ_E1 && move.to == SQ_C1) {
+        set_piece(SQ_A1, W_ROOK);
+        rem_piece(SQ_D1);
+    } else if (get_piece(move.from) == B_KING && move.from == SQ_E8 && move.to == SQ_G8) {
+        set_piece(SQ_H8, B_ROOK);
+        rem_piece(SQ_F8);
+    } else if (get_piece(move.from) == B_KING && move.from == SQ_E8 && move.to == SQ_C8) {
+        set_piece(SQ_A8, B_ROOK);
+        rem_piece(SQ_D8);
+    }
 }
 
 bool Board::is_square_attacked_by(Square sq, Color side) {
@@ -288,10 +379,10 @@ bool Board::is_square_attacked_by(Square sq, Color side) {
     else if (king_attacks[sq] & by_color[side] & by_type[KING])
         res = true;
 
-    else if (fast_bishop_attacks(sq, by_color[WHITE] | by_color[BLACK]) & by_color[side] & (by_type[BISHOP] | by_type[QUEEN]))
+    else if (get_bishop_attacks(sq, by_color[WHITE] | by_color[BLACK]) & by_color[side] & (by_type[BISHOP] | by_type[QUEEN]))
         res = true;
 
-    else if (fast_rook_attacks(sq, by_color[WHITE] | by_color[BLACK]) & by_color[side] & (by_type[ROOK] | by_type[QUEEN]))
+    else if (get_rook_attacks(sq, by_color[WHITE] | by_color[BLACK]) & by_color[side] & (by_type[ROOK] | by_type[QUEEN]))
         res = true;
 
     return res;
@@ -396,7 +487,7 @@ MoveList Board::gen_pseudolegal_moves() {
 
     while (our_bishops) {
         from = pop_lsb(our_bishops);
-        moves_from_attack_bb(from, fast_bishop_attacks(from, all) & ~allies, res);
+        moves_from_attack_bb(from, get_bishop_attacks(from, all) & ~allies, res);
     }
 
     // Rooks
@@ -404,7 +495,7 @@ MoveList Board::gen_pseudolegal_moves() {
 
     while (our_rooks) {
         from = pop_lsb(our_rooks);
-        moves_from_attack_bb(from, fast_rook_attacks(from, all) & ~allies, res);
+        moves_from_attack_bb(from, get_rook_attacks(from, all) & ~allies, res);
     }
 
     // Queens
@@ -412,7 +503,7 @@ MoveList Board::gen_pseudolegal_moves() {
 
     while (our_queens) {
         from = pop_lsb(our_queens);
-        moves_from_attack_bb(from, (fast_rook_attacks(from, all) | fast_bishop_attacks(from, all)) & ~allies, res);
+        moves_from_attack_bb(from, (get_rook_attacks(from, all) | get_bishop_attacks(from, all)) & ~allies, res);
     }
 
     // King
@@ -436,7 +527,6 @@ MoveList Board::gen_pseudolegal_moves() {
     return res;
 }
 
-// TODO: implement board history
 MoveList Board::gen_legal_moves() {
     MoveList res;
     Color safe_king_color = side_to_move;
@@ -445,7 +535,7 @@ MoveList Board::gen_legal_moves() {
         make_move(move);
         if (!is_square_attacked_by(Square(lsb(by_type[KING] & by_color[safe_king_color])), side_to_move))
             res.push_back(move);
-        undo_move();
+        undo_move(move);
     }
 
     return res;
@@ -473,7 +563,23 @@ std::ostream& operator<<(std::ostream& os, Board board) {
 std::ostream& operator<<(std::ostream& os, Move move) {
     std::string prom_table = " nbrq";
     os << std::string(1, (move.from % 8) + 'a') << std::string(1, (int)(move.from / 8) + '1')
-       << std::string(1, (move.to   % 8) + 'a') << std::string(1, (int)(move.to   / 8) + '1') << prom_table[move.promotion];
+       << std::string(1, (move.to   % 8) + 'a') << std::string(1, (int)(move.to   / 8) + '1');
+
+    if (move.promotion)
+        os << prom_table[move.promotion];
 
     return os;
+}
+
+bool operator==(UndoInfo u, UndoInfo o) {
+    bool res = true;
+
+    res &= u.captured_piece == o.captured_piece;
+    res &= u.en_passant == o.en_passant;
+    res &= u.en_passant_sq == o.en_passant_sq;
+    res &= u.rule50_half_moves == o.rule50_half_moves;
+    res &= u.castling_rights.get_data() == o.castling_rights.get_data();
+    res &= u.promotion == o.promotion;
+
+    return res;
 }

@@ -6,6 +6,8 @@
 #include <iostream>
 
 int main() {
+    init();
+
     test_time_movegen();
 
     return 0;

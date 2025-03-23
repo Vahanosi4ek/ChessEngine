@@ -6,11 +6,19 @@ int perft(Board& board, const int& depth) {
     int res = 0;
     if (depth == 0) return 1;
     else {
+        Board b = board;
         MoveList moves = board.gen_legal_moves();
         for (Move move : moves) {
             board.make_move(move);
             res += perft(board, depth - 1);
-            board.undo_move();
+            board.undo_move(move);
+            // Useful for debugging
+            if (!(board == b)) {
+                std::cout << "Not equal" << std::endl;
+                std::cout << b;
+                std::cout << board;
+                assert(false);
+            }
         }
     }
 
@@ -25,7 +33,7 @@ int dump_perft(Board& board, const int& depth) {
         cur_res = perft(board, depth - 1);
         res += cur_res;
         std::cout << move << ": " << cur_res << std::endl;
-        board.undo_move();
+        board.undo_move(move);
     }
 
     std::cout << "Total leaf nodes: " << res << std::endl;
@@ -64,4 +72,5 @@ void test_time_movegen() {
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 
     std::cout << "Tests took " << duration.count() << " milliseconds" << std::endl;
+    std::cout << "Speed: " << (197281 + 97862 + 674624 + 422333 + 422333 + 62379 + 89890) / std::chrono::duration_cast<std::chrono::seconds>(end - start).count() << " Nodes per second" << std::endl;
 }
