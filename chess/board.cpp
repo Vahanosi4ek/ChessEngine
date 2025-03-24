@@ -105,39 +105,6 @@ Board::Board() {
         board[i] = NO_PIECE;
 }
 
-bool Board::operator==(const Board& other) const {
-    bool res = true;
-    // Undo info
-    res &= undo_info == other.undo_info;
-    if (!res) std::cout << "HERE!!" << std::endl;
-
-    // Board flags
-    res &= side_to_move == other.side_to_move;
-    if (!res) std::cout << "HERE!!" << std::endl;
-    res &= en_passant_sq == other.en_passant_sq;
-    if (!res) std::cout << "HERE!!" << std::endl;
-    res &= rule50_half_moves == other.rule50_half_moves;
-    if (!res) std::cout << "HERE!!" << std::endl;
-    res &= move_counter == other.move_counter;
-    if (!res) std::cout << "HERE!!" << std::endl;
-    res &= castling_rights.get_data() == other.castling_rights.get_data();
-    if (!res) { std::cout << castling_rights.get_data() << ", " << other.castling_rights.get_data() << std::endl; }
-
-    // Board pieces
-    for (int i = 0; i < 64; i++) {
-        res &= board[i] == other.board[i];
-    }
-
-    for (int i = 0; i < PIECE_TYPE_ALL; i++) {
-        res &= by_type[i] == other.by_type[i];
-    }
-
-    res &= by_color[WHITE] == other.by_color[WHITE];
-    res &= by_color[BLACK] == other.by_color[BLACK];
-
-    return res;
-}
-
 void Board::rem_piece(Square sq) {
     if (get_piece(sq) != NO_PIECE) {
         clear_square(by_color[get_color(get_piece(sq))], sq);
@@ -216,8 +183,8 @@ Board& Board::load_from_fen(const std::string& fen) {
 }
 
 Board& Board::make_move(Move move) {
+    cur_undo_index++;
     UndoInfo u;
-
     u.captured_piece = NO_PIECE;
     u.en_passant = false;
     u.promotion = true;
@@ -308,14 +275,14 @@ Board& Board::make_move(Move move) {
     // Set actual ep square
     en_passant_sq = temp_en_passant_sq;
 
-    undo_info.push_back(u);
+    undo_info[cur_undo_index] = u;
 
     return *this;
 }
 
 void Board::undo_move(Move move) {
-    UndoInfo u = undo_info.back();
-    undo_info.pop_back();
+    UndoInfo u = undo_info[cur_undo_index];
+    cur_undo_index--;
     side_to_move = Color(1 - side_to_move);
     en_passant_sq = u.en_passant_sq;
     castling_rights = u.castling_rights;

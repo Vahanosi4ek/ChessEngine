@@ -6,19 +6,11 @@ int perft(Board& board, const int& depth) {
     int res = 0;
     if (depth == 0) return 1;
     else {
-        Board b = board;
         MoveList moves = board.gen_legal_moves();
         for (Move move : moves) {
             board.make_move(move);
             res += perft(board, depth - 1);
             board.undo_move(move);
-            // Useful for debugging
-            // if (!(board == b)) {
-            //     std::cout << "Not equal" << std::endl;
-            //     std::cout << b;
-            //     std::cout << board;
-            //     assert(false);
-            // }
         }
     }
 
